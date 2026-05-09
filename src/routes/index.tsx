@@ -47,8 +47,8 @@ function Landing() {
             <a href="#analytics" className="px-3 py-1.5 rounded-full hover:text-foreground hover:bg-white/5 transition">Analytics</a>
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <Link to="/login" className="px-4 py-1.5 text-sm rounded-full hover:bg-white/5 transition">Sign in</Link>
-            <Link to="/signup" className="px-4 py-1.5 text-sm rounded-full bg-foreground text-background font-medium hover:opacity-90 transition">Start free</Link>
+            <Link to="/login" search={{ redirect: undefined }} className="px-4 py-1.5 text-sm rounded-full hover:bg-white/5 transition">Sign in</Link>
+            <Link to="/signup" search={{ redirect: undefined }} className="px-4 py-1.5 text-sm rounded-full bg-foreground text-background font-medium hover:opacity-90 transition">Start free</Link>
           </div>
         </nav>
       </header>
@@ -75,7 +75,7 @@ function Landing() {
               An adaptive AI productivity system inspired by cognitive science and brain behavior — your second prefrontal cortex.
             </p>
             <div className="mt-10 flex items-center justify-center gap-3">
-              <Link to="/signup" className="group px-6 py-3 rounded-full bg-foreground text-background font-medium flex items-center gap-2 hover:scale-[1.02] transition">
+              <Link to="/signup" search={{ redirect: undefined }} className="group px-6 py-3 rounded-full bg-foreground text-background font-medium flex items-center gap-2 hover:scale-[1.02] transition">
                 Get started <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition" />
               </Link>
               <button className="px-6 py-3 rounded-full glass flex items-center gap-2 hover:bg-white/5 transition">
@@ -229,7 +229,7 @@ function Landing() {
           <div className="relative">
             <h2 className="font-display text-4xl md:text-6xl tracking-tight">Your mind, upgraded.</h2>
             <p className="mt-4 text-muted-foreground max-w-xl mx-auto">Join the waitlist for the cognitive operating system designed around how humans actually focus.</p>
-            <Link to="/signup" className="inline-flex items-center gap-2 mt-8 px-7 py-3.5 rounded-full bg-foreground text-background font-medium hover:scale-[1.02] transition">
+            <Link to="/signup" search={{ redirect: undefined }} className="inline-flex items-center gap-2 mt-8 px-7 py-3.5 rounded-full bg-foreground text-background font-medium hover:scale-[1.02] transition">
               Get started free <ArrowRight className="h-4 w-4" />
             </Link>
             <div className="mt-6 flex items-center justify-center gap-6 text-xs text-muted-foreground">

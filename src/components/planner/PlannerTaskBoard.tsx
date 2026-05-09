@@ -1,7 +1,10 @@
 import { motion } from "framer-motion";
 import { CalendarRange, Clock, Flame, GripVertical, Plus } from "lucide-react";
+import { useMemo } from "react";
+import type { DragEvent } from "react";
 import { SectionHeader } from "@/components/PageShell";
 import type { PlannerTask } from "@/components/planner/types";
+import { getBurnoutTone, getCognitiveTone, getFocusTone } from "@/components/planner/cognitive-visuals";
 
 type PlannerTaskBoardProps = {
   tasks: PlannerTask[];
@@ -10,11 +13,14 @@ type PlannerTaskBoardProps = {
 };
 
 export function PlannerTaskBoard({ tasks, onToggleDone, onDragTaskStart }: PlannerTaskBoardProps) {
-  const buckets = {
-    high: tasks.filter((task) => task.priority === "high"),
-    med: tasks.filter((task) => task.priority === "med"),
-    low: tasks.filter((task) => task.priority === "low"),
-  };
+  const buckets = useMemo(
+    () => ({
+      high: tasks.filter((task) => task.priority === "high"),
+      med: tasks.filter((task) => task.priority === "med"),
+      low: tasks.filter((task) => task.priority === "low"),
+    }),
+    [tasks],
+  );
 
   return (
     <>
@@ -43,48 +49,77 @@ export function PlannerTaskBoard({ tasks, onToggleDone, onDragTaskStart }: Plann
               <span className="text-xs text-muted-foreground">{buckets[bucket].length}</span>
             </div>
 
-            <div className="space-y-2">
-              {buckets[bucket].map((task) => (
-                <motion.div
-                  layout
-                  key={task.id}
-                  draggable
-                  onDragStart={(event) => {
-                    event.dataTransfer.setData("text/plain", onDragTaskStart(task.id));
-                    event.dataTransfer.effectAllowed = "move";
-                  }}
-                  className="p-3 rounded-xl bg-background/40 border border-white/5 group cursor-grab active:cursor-grabbing"
-                >
-                  <div className="flex items-center gap-2">
-                    <GripVertical className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100" />
-                    <input
-                      type="checkbox"
-                      checked={task.done}
-                      onChange={() => onToggleDone(task.id)}
-                      className="h-3.5 w-3.5 accent-coral"
-                    />
-                    <div
-                      className={`text-sm flex-1 ${task.done ? "line-through text-muted-foreground" : ""}`}
-                    >
-                      {task.title}
+            <div className="space-y-3">
+              {buckets[bucket].map((task) => {
+                const cognitiveLoad = task.cognitiveLoad ?? 0;
+                const fatigueScore = task.fatigueScore ?? 0;
+                const focusScore = task.focusScore ?? 0;
+                const burnoutRisk = task.burnoutRisk ?? "low";
+                const riskClass = getBurnoutTone(burnoutRisk);
+                const loadClass = getCognitiveTone(cognitiveLoad);
+                const focusClass = getFocusTone(focusScore);
+
+                return (
+                  <motion.div
+                    layout
+                    key={task.id}
+                    draggable
+                    whileHover={{ y: -2 }}
+                    transition={{ duration: 0.2 }}
+                    onDragStart={(event) => {
+                      const dragEvent = event as unknown as DragEvent<HTMLDivElement>;
+                      dragEvent.dataTransfer.setData("text/plain", onDragTaskStart(task.id));
+                      dragEvent.dataTransfer.effectAllowed = "move";
+                    }}
+                    className={`group overflow-hidden rounded-3xl border p-3 bg-background/40 transition duration-200 ${
+                      burnoutRisk === "high" ? "border-destructive/30 shadow-[0_0_0_1px_rgba(248,113,113,0.1)]" : "border-white/5"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <GripVertical className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition" />
+                      <input
+                        type="checkbox"
+                        checked={task.done}
+                        onChange={() => onToggleDone(task.id)}
+                        className="h-3.5 w-3.5 accent-coral"
+                      />
+                      <div className={`flex-1 text-sm ${task.done ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                        {task.title}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3 mt-2 text-[11px] text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Flame className="h-3 w-3" /> {task.energy}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" /> {task.duration}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <CalendarRange className="h-3 w-3" />{" "}
-                      {task.scheduledHour !== undefined
-                        ? `${task.scheduledHour}:00`
-                        : "Unscheduled"}
-                    </span>
-                  </div>
-                </motion.div>
-              ))}
+
+                    <div className="mt-3 grid gap-2 text-[11px]">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-medium ${loadClass}`}>
+                          <Flame className="h-3 w-3" /> {cognitiveLoad}% load
+                        </span>
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-medium ${focusClass}`}>
+                          <Clock className="h-3 w-3" /> {focusScore}% focus
+                        </span>
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-medium ${riskClass}`}>
+                          {burnoutRisk.toUpperCase()}
+                        </span>
+                      </div>
+
+                      <div className="grid gap-2 sm:grid-cols-2 text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Flame className="h-3 w-3" /> {task.energy}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" /> {task.duration}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <CalendarRange className="h-3 w-3" /> {task.scheduledHour !== undefined ? `${task.scheduledHour}:00` : "Unscheduled"}
+                        </span>
+                      </div>
+
+                      <div className="rounded-2xl border border-white/10 bg-surface/50 px-3 py-2 text-[11px] text-muted-foreground">
+                        Optimal window: <span className="font-medium text-foreground">{task.recommendedTimeWindow ?? "Any available slot"}</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
           </div>
         ))}

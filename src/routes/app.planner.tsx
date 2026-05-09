@@ -10,10 +10,12 @@ import {
   buildRecommendations,
   computeMetrics,
   createBlockFromTask,
+  hydratePlannerTask,
+  hydratePlannerTasks,
   toPlannerTasks,
 } from "@/components/planner/planner-utils";
 import type { PlannerTask, TimelineBlock } from "@/components/planner/types";
-import AddTaskModal from "@/components/tasks/AddTaskModal";
+import AddTaskModal, { type TaskData } from "@/components/tasks/AddTaskModal";
 
 
 export const Route = createFileRoute("/app/planner")({
@@ -46,7 +48,7 @@ function PlannerPage() {
     try {
       const parsed = JSON.parse(raw) as { tasks: PlannerTask[]; blocks: TimelineBlock[] };
       if (Array.isArray(parsed.tasks) && Array.isArray(parsed.blocks)) {
-        setTasks(parsed.tasks);
+        setTasks(hydratePlannerTasks(parsed.tasks));
         setBlocks(parsed.blocks);
       }
     } catch {
@@ -74,42 +76,73 @@ function PlannerPage() {
 
   const onToggleDone = useCallback((taskId: string) => {
     setTasks((previous) =>
-      previous.map((task) => (task.id === taskId ? { ...task, done: !task.done } : task)),
+      previous.map((task) =>
+        task.id === taskId ? hydratePlannerTask({ ...task, done: !task.done }) : task,
+      ),
     );
   }, []);
-  const handleSaveTask=(task:any)=>{
-    setTasks((prev) => [...prev, task]);
+
+  const handleSaveTask = (task: TaskData) => {
+    const energyMap = {
+      High: "high",
+      Medium: "med",
+      Low: "low",
+    } as const;
+    const priorityMap = {
+      High: "high",
+      Medium: "med",
+      Low: "low",
+    } as const;
+
+    const plannerTask = toPlannerTasks([
+      {
+        id: crypto.randomUUID(),
+        title: task.title,
+        energy: energyMap[task.energy],
+        priority: priorityMap[task.priority],
+        duration: `${task.duration}m`,
+        done: false,
+      },
+    ])[0];
+
+    setTasks((previous) => [...previous, plannerTask]);
     setIsModalOpen(false);
-  }
+  };
 
   const handleDropAtHour = useCallback(
     (hour: number, payload: string) => {
       if (payload.startsWith("task:")) {
         const taskId = payload.replace("task:", "");
-        setTasks((previous) =>
-          previous.map((task) => (task.id === taskId ? { ...task, scheduledHour: hour } : task)),
-        );
-        setBlocks((previous) => {
-          const exists = previous.some((block) => block.taskId === taskId);
-          if (exists) {
-            return previous.map((block) => (block.taskId === taskId ? { ...block, hour } : block));
-          }
+        setTasks((previous) => {
+          const task = previous.find((item) => item.id === taskId);
+          const updatedTasks = previous.map((task) =>
+            task.id === taskId ? hydratePlannerTask({ ...task, scheduledHour: hour }) : task,
+          );
 
-          const task = tasks.find((item) => item.id === taskId);
-          return task ? [...previous, createBlockFromTask(task, hour)] : previous;
+          setBlocks((previousBlocks) => {
+            const exists = previousBlocks.some((block) => block.taskId === taskId);
+            if (exists) {
+              return previousBlocks.map((block) =>
+                block.taskId === taskId ? { ...block, hour } : block,
+              );
+            }
+            return task ? [...previousBlocks, createBlockFromTask(hydratePlannerTask({ ...task, scheduledHour: hour }), hour)] : previousBlocks;
+          });
+
+          return updatedTasks;
         });
       }
 
       if (payload.startsWith("block:")) {
         const blockId = payload.replace("block:", "");
+        const currentBlock = blocks.find((block) => block.id === blockId);
         setBlocks((previous) =>
           previous.map((block) => (block.id === blockId ? { ...block, hour } : block)),
         );
-        const target = blocks.find((block) => block.id === blockId);
-        if (target) {
+        if (currentBlock) {
           setTasks((previous) =>
             previous.map((task) =>
-              task.id === target.taskId ? { ...task, scheduledHour: hour } : task,
+              task.id === currentBlock.taskId ? { ...task, scheduledHour: hour } : task,
             ),
           );
         }

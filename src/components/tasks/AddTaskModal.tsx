@@ -19,25 +19,12 @@ type AddTaskModalProps = {
   onSave: (task: TaskData) => void;
 };
 
-const categories = [
-  "Deep Work",
-  "Learning",
-  "Meetings",
-  "Research",
-  "Fitness",
-  "Creative",
-];
+const categories = ["Deep Work", "Learning", "Meetings", "Research", "Fitness", "Creative"];
 
-export default function AddTaskModal({
-  open,
-  onClose,
-  onSave,
-}: AddTaskModalProps) {
+export default function AddTaskModal({ open, onClose, onSave }: AddTaskModalProps) {
   const [title, setTitle] = useState("");
   const [energy, setEnergy] = useState<"Low" | "Medium" | "High">("Medium");
-  const [priority, setPriority] = useState<"Low" | "Medium" | "High">(
-    "Medium"
-  );
+  const [priority, setPriority] = useState<"Low" | "Medium" | "High">("Medium");
   const [duration, setDuration] = useState(60);
   const [category, setCategory] = useState("Deep Work");
 
@@ -83,12 +70,8 @@ export default function AddTaskModal({
             {/* HEADER */}
             <div className="flex items-center justify-between border-b border-white/10 px-6 py-5">
               <div>
-                <h2 className="text-2xl font-bold text-white">
-                  Create New Task
-                </h2>
-                <p className="text-sm text-gray-400 mt-1">
-                  Schedule around your cognitive peak.
-                </p>
+                <h2 className="text-2xl font-bold text-white">Create New Task</h2>
+                <p className="text-sm text-gray-400 mt-1">Schedule around your cognitive peak.</p>
               </div>
 
               <button
@@ -103,9 +86,7 @@ export default function AddTaskModal({
             <div className="space-y-5 px-6 py-6">
               {/* TITLE */}
               <div>
-                <label className="mb-2 block text-sm text-gray-300">
-                  Task Title
-                </label>
+                <label className="mb-2 block text-sm text-gray-300">Task Title</label>
 
                 <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
                   <Brain className="text-cyan-400" size={18} />
@@ -123,17 +104,13 @@ export default function AddTaskModal({
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {/* ENERGY */}
                 <div>
-                  <label className="mb-2 block text-sm text-gray-300">
-                    Energy Level
-                  </label>
+                  <label className="mb-2 block text-sm text-gray-300">Energy Level</label>
 
                   <div className="flex gap-2">
                     {["Low", "Medium", "High"].map((level) => (
                       <button
                         key={level}
-                        onClick={() =>
-                          setEnergy(level as "Low" | "Medium" | "High")
-                        }
+                        onClick={() => setEnergy(level as "Low" | "Medium" | "High")}
                         className={`flex-1 rounded-xl px-4 py-3 text-sm font-medium transition ${
                           energy === level
                             ? "bg-cyan-500 text-white"
@@ -148,17 +125,13 @@ export default function AddTaskModal({
 
                 {/* PRIORITY */}
                 <div>
-                  <label className="mb-2 block text-sm text-gray-300">
-                    Priority
-                  </label>
+                  <label className="mb-2 block text-sm text-gray-300">Priority</label>
 
                   <div className="flex gap-2">
                     {["Low", "Medium", "High"].map((level) => (
                       <button
                         key={level}
-                        onClick={() =>
-                          setPriority(level as "Low" | "Medium" | "High")
-                        }
+                        onClick={() => setPriority(level as "Low" | "Medium" | "High")}
                         className={`flex-1 rounded-xl px-4 py-3 text-sm font-medium transition ${
                           priority === level
                             ? "bg-pink-500 text-white"
@@ -174,9 +147,7 @@ export default function AddTaskModal({
 
               {/* DURATION */}
               <div>
-                <label className="mb-2 block text-sm text-gray-300">
-                  Estimated Duration
-                </label>
+                <label className="mb-2 block text-sm text-gray-300">Estimated Duration</label>
 
                 <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
                   <Timer className="text-violet-400" size={18} />
@@ -194,9 +165,7 @@ export default function AddTaskModal({
 
               {/* CATEGORY */}
               <div>
-                <label className="mb-2 block text-sm text-gray-300">
-                  Task Category
-                </label>
+                <label className="mb-2 block text-sm text-gray-300">Task Category</label>
 
                 <div className="grid grid-cols-2 gap-3">
                   {categories.map((item) => (
@@ -230,7 +199,7 @@ export default function AddTaskModal({
 
               <button
                 onClick={handleSave}
-                className="rounded-xl bg-gradient-to-r from-cyan-500 to-pink-500 px-6 py-3 font-semibold text-white shadow-lg transition hover:scale-[1.02]"
+                className="rounded-xl bg-linear-to-r from-cyan-500 to-pink-500 px-6 py-3 font-semibold text-white shadow-lg transition hover:scale-[1.02]"
               >
                 Save Task
               </button>

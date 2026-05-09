@@ -32,22 +32,29 @@ export function PlannerInsightsPanel({ metrics, recommendations }: PlannerInsigh
           accent="coral"
           icon={<Brain className="h-3.5 w-3.5" />}
         />
-        <MetricBar label="Completion" value={metrics.completionRate} accent="electric" />
-        <MetricBar label="Schedule coverage" value={metrics.scheduleCoverage} accent="violet" />
-        <MetricBar label="Peak alignment" value={metrics.peakAlignment} accent="coral" />
+        <MetricBar label="Avg. cognitive load" value={metrics.averageCognitiveLoad} accent="electric" />
+        <MetricBar label="Fatigue risk" value={metrics.fatigueRisk} accent="violet" />
+        <MetricBar label="Burnout exposure" value={metrics.burnoutExposure} accent="coral" />
       </div>
 
       <div className="mt-4 p-4 rounded-2xl bg-surface/50 border border-white/10">
-        <div className="text-xs text-muted-foreground">Fatigue-aware indicator</div>
+        <div className="text-xs text-muted-foreground">Fatigue & burnout exposure</div>
         <div className={`mt-1 text-sm font-medium ${fatigueTone}`}>
-          Fatigue risk {metrics.fatigueRisk}%{" "}
-          {metrics.fatigueRisk > 60 ? "· Reduce high-load blocks" : "· Balanced"}
+          Burnout {metrics.burnoutExposure}% · Fatigue {metrics.fatigueRisk}%
         </div>
-        <div className="mt-3 h-1.5 rounded-full bg-surface-2 overflow-hidden">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-violet via-coral to-destructive"
-            style={{ width: `${metrics.fatigueRisk}%` }}
-          />
+        <div className="mt-3 grid gap-2">
+          <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-linear-to-r from-electric via-coral to-destructive"
+              style={{ width: `${metrics.burnoutExposure}%` }}
+            />
+          </div>
+          <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-linear-to-r from-cyan-400 via-violet to-destructive"
+              style={{ width: `${metrics.fatigueRisk}%` }}
+            />
+          </div>
         </div>
       </div>
 
@@ -55,7 +62,7 @@ export function PlannerInsightsPanel({ metrics, recommendations }: PlannerInsigh
         {recommendations.map((card) => (
           <div
             key={card.id}
-            className="p-4 rounded-2xl bg-gradient-to-br from-coral/10 to-electric/10 border border-white/10"
+            className="p-4 rounded-2xl bg-linear-to-br from-coral/10 to-electric/10 border border-white/10"
           >
             <div className="flex items-center gap-2 text-sm">
               {card.severity === "warning" ? (
@@ -101,7 +108,7 @@ function MetricBar({
       </div>
       <div className="mt-1.5 h-1.5 rounded-full bg-surface-2 overflow-hidden">
         <div
-          className={`h-full rounded-full bg-gradient-to-r ${gradient}`}
+          className={`h-full rounded-full bg-linear-to-r ${gradient}`}
           style={{ width: `${value}%` }}
         />
       </div>

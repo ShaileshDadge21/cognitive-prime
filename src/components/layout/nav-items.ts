@@ -11,7 +11,14 @@ import {
   Settings,
 } from "lucide-react";
 
-export const appNavItems = [
+type AppNavItem = {
+  to: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  exact?: boolean;
+};
+
+export const appNavItems: AppNavItem[] = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/app/planner", label: "Adaptive Planner", icon: CalendarRange },
   { to: "/app/assistant", label: "AI Assistant", icon: Sparkles },
@@ -22,4 +29,4 @@ export const appNavItems = [
   { to: "/app/habits", label: "Habits", icon: Target },
   { to: "/app/journal", label: "Journal", icon: NotebookPen },
   { to: "/app/settings", label: "Settings", icon: Settings },
-] as const;
+];

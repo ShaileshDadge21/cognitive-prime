@@ -9,8 +9,10 @@ import {
   Tooltip,
   CartesianGrid,
 } from "recharts";
+import type { DragEvent } from "react";
 import { SectionHeader } from "@/components/PageShell";
 import { peakHours, timelineHours } from "@/components/planner/planner-utils";
+import { getCognitiveTone, getBurnoutTone } from "@/components/planner/cognitive-visuals";
 import type { TimelineBlock } from "@/components/planner/types";
 
 type PlannerTimelineProps = {
@@ -63,7 +65,7 @@ export function PlannerTimeline({
                     onDropAtHour(hour, payload);
                   }
                 }}
-                className={`border-r border-white/5 last:border-0 ${peakHours.includes(hour) ? "bg-coral/[0.04]" : ""}`}
+                className={`border-r border-white/5 last:border-0 ${peakHours.includes(hour) ? "bg-coral/4" : ""}`}
               />
             ))}
           </div>
@@ -77,13 +79,15 @@ export function PlannerTimeline({
                 key={block.id}
                 layout
                 draggable
+                whileHover={{ y: -2 }}
                 onDragStart={(event) => {
-                  event.dataTransfer.setData("text/plain", onDragStartBlock(block.id));
-                  event.dataTransfer.effectAllowed = "move";
+                  const dragEvent = event as unknown as DragEvent<HTMLDivElement>;
+                  dragEvent.dataTransfer.setData("text/plain", onDragStartBlock(block.id));
+                  dragEvent.dataTransfer.effectAllowed = "move";
                 }}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`absolute top-3 bottom-3 rounded-xl px-3 py-2 border backdrop-blur-md text-xs cursor-grab active:cursor-grabbing ${
+                className={`absolute top-3 bottom-3 rounded-xl px-3 py-3 border backdrop-blur-md text-xs cursor-grab active:cursor-grabbing transition-all duration-200 ${
                   block.color === "coral"
                     ? "bg-coral/15 border-coral/30 text-coral"
                     : block.color === "electric"
@@ -93,7 +97,15 @@ export function PlannerTimeline({
                 style={{ left: `${left}%`, width: `calc(${width}% - 6px)` }}
               >
                 <div className="font-medium text-foreground truncate">{block.title}</div>
-                <div className="opacity-80 mt-1 flex items-center gap-1">
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <span className={`rounded-full border px-2 py-1 text-[10px] ${getCognitiveTone(block.cognitiveLoad)}`}>
+                    {block.cognitiveLoad}% load
+                  </span>
+                  <span className={`rounded-full border px-2 py-1 text-[10px] ${getBurnoutTone(block.burnoutRisk)}`}>
+                    {block.burnoutRisk}
+                  </span>
+                </div>
+                <div className="opacity-80 mt-2 flex items-center gap-1 text-[11px]">
                   <Zap className="h-3 w-3" /> {block.energyLoad}% cognitive load
                 </div>
               </motion.div>
