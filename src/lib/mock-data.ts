@@ -15,11 +15,46 @@ export const cognitiveRadial = [
 ];
 
 export const tasks = [
-  { id: "1", title: "Deep work: Research paper", priority: "high", energy: "high", duration: "90m", done: false },
-  { id: "2", title: "Review team PRs", priority: "med", energy: "med", duration: "30m", done: false },
-  { id: "3", title: "Sync with design", priority: "med", energy: "low", duration: "20m", done: true },
-  { id: "4", title: "Spaced repetition: Spanish", priority: "low", energy: "low", duration: "15m", done: false },
-  { id: "5", title: "Strategy planning Q3", priority: "high", energy: "high", duration: "60m", done: false },
+  {
+    id: "1",
+    title: "Deep work: Research paper",
+    priority: "high",
+    energy: "high",
+    duration: "90m",
+    done: false,
+  },
+  {
+    id: "2",
+    title: "Review team PRs",
+    priority: "med",
+    energy: "med",
+    duration: "30m",
+    done: false,
+  },
+  {
+    id: "3",
+    title: "Sync with design",
+    priority: "med",
+    energy: "low",
+    duration: "20m",
+    done: true,
+  },
+  {
+    id: "4",
+    title: "Spaced repetition: Spanish",
+    priority: "low",
+    energy: "low",
+    duration: "15m",
+    done: false,
+  },
+  {
+    id: "5",
+    title: "Strategy planning Q3",
+    priority: "high",
+    energy: "high",
+    duration: "60m",
+    done: false,
+  },
 ];
 
 export const habits = [
@@ -38,7 +73,24 @@ export const moodOptions = [
 ];
 
 export const aiMessages = [
-  { from: "ai", text: "Good morning. Your cognitive score is 86 — peak focus window detected between 9–11 AM." },
+  {
+    from: "ai",
+    text: "Good morning. Your cognitive score is 86 — peak focus window detected between 9–11 AM.",
+  },
   { from: "user", text: "What should I tackle first?" },
-  { from: "ai", text: "I'd start with the research paper. High cognitive load matches your current energy. I've moved meetings to the afternoon." },
+  {
+    from: "ai",
+    text: "I'd start with the research paper. High cognitive load matches your current energy. I've moved meetings to the afternoon.",
+  },
 ];
+
+export const cognitiveHeatmap = Array.from({ length: 7 * 12 }, (_, i) => {
+  const signal = (Math.sin((i * 1.8) / 7) + 1) / 2;
+  const trend = ((i % 12) + 1) / 12;
+  return { i, v: Math.min(1, signal * 0.65 + trend * 0.35) };
+});
+
+export const cognitiveLoadWave = Array.from({ length: 40 }, (_, i) => ({
+  i,
+  v: 52 + Math.sin(i / 3) * 22 + Math.cos(i / 5) * 12,
+}));
