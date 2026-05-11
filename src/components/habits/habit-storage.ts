@@ -273,3 +273,124 @@ export function importHabitData(jsonData: string): boolean {
     return false;
   }
 }
+
+// ============================================================================
+// ADVANCED PERSISTENCE FEATURES
+// ============================================================================
+
+/**
+ * Backup habits to a downloadable file
+ */
+export function createHabitBackup(): void {
+  const data = exportHabitData();
+  const blob = new Blob([data], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `neuroflow-habits-backup-${new Date().toISOString().split("T")[0]}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Restore habits from a backup file
+ */
+export function restoreHabitBackup(file: File): Promise<boolean> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      if (content) {
+        const success = importHabitData(content);
+        resolve(success);
+      } else {
+        resolve(false);
+      }
+    };
+    reader.onerror = () => resolve(false);
+    reader.readAsText(file);
+  });
+}
+
+/**
+ * Get storage usage statistics
+ */
+export function getHabitStorageStats(): {
+  totalHabits: number;
+  totalCompletions: number;
+  storageSize: number;
+  oldestEntry?: string;
+  newestEntry?: string;
+} {
+  const habits = loadHabits();
+  const totalCompletions = habits.reduce((sum, habit) => sum + habit.completionHistory.length, 0);
+
+  const allDates = habits
+    .flatMap((habit) => habit.completionHistory.map((record) => record.date))
+    .sort();
+
+  const storageSize = new Blob([exportHabitData()]).size;
+
+  return {
+    totalHabits: habits.length,
+    totalCompletions,
+    storageSize,
+    oldestEntry: allDates[0],
+    newestEntry: allDates[allDates.length - 1],
+  };
+}
+
+/**
+ * Clean up old completion records (keep last N months)
+ */
+export function cleanupOldCompletions(monthsToKeep = 12): number {
+  const habits = loadHabits();
+  const cutoffDate = new Date();
+  cutoffDate.setMonth(cutoffDate.getMonth() - monthsToKeep);
+  const cutoffString = cutoffDate.toISOString().split("T")[0];
+
+  let totalRemoved = 0;
+
+  const cleanedHabits = habits.map((habit) => {
+    const originalLength = habit.completionHistory.length;
+    const filteredHistory = habit.completionHistory.filter((record) => record.date >= cutoffString);
+
+    totalRemoved += originalLength - filteredHistory.length;
+
+    return {
+      ...habit,
+      completionHistory: filteredHistory,
+      updatedAt: new Date().toISOString(),
+    };
+  });
+
+  if (totalRemoved > 0) {
+    saveHabits(cleanedHabits);
+  }
+
+  return totalRemoved;
+}
+
+/**
+ * Migrate habits from older storage versions
+ */
+export function migrateHabitStorage(): boolean {
+  const raw = localStorage.getItem(HABIT_STORAGE_KEY);
+  if (!raw) return false;
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed.version === HABIT_STORAGE_VERSION) return false;
+
+    // Handle version migrations here
+    // For now, just re-save with current version
+    const habits = Array.isArray(parsed.habits) ? parsed.habits : [];
+    saveHabits(habits);
+    return true;
+  } catch {
+    return false;
+  }
+}

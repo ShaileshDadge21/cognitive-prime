@@ -9,7 +9,9 @@ export function Logo({ to = "/" }: { to?: string }) {
           <div className="h-2 w-2 rounded-full bg-coral animate-pulse-glow" />
         </div>
       </div>
-      <span className="font-display font-semibold tracking-tight">NeuroFlow<span className="text-coral">.AI</span></span>
+      <span className="font-display font-semibold tracking-tight">
+        NeuroFlow<span className="text-coral">.AI</span>
+      </span>
     </Link>
   );
 }

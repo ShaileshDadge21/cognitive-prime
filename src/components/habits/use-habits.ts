@@ -8,22 +8,58 @@ import {
   computeHabitAnalytics,
   generateHabitRecommendation,
   deleteHabit as deleteHabitFromStorage,
+  createHabitBackup,
+  restoreHabitBackup,
+  getHabitStorageStats,
+  cleanupOldCompletions,
+  migrateHabitStorage,
 } from "./habit-storage";
+import {
+  calculateHabitScore,
+  generateHabitInsights,
+  generateAdaptiveRecommendations,
+  generateHabitHealthReport,
+  type HabitScore,
+  type HabitInsights,
+  type AdaptiveRecommendation,
+  type HabitHealthReport,
+} from "@/lib/habit-scoring-engine";
+import { isStorageAvailable } from "@/lib/storage";
 
 export function useHabits() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [storageAvailable, setStorageAvailable] = useState(true);
 
   useEffect(() => {
-    try {
-      const loadedHabits = loadHabits();
-      setHabits(loadedHabits);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load habits");
-    } finally {
-      setLoading(false);
-    }
+    const checkStorage = async () => {
+      const available = isStorageAvailable();
+      setStorageAvailable(available);
+
+      if (!available) {
+        setError("Local storage is not available. Habit data will not persist.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Attempt migration if needed
+        const migrated = migrateHabitStorage();
+        if (migrated) {
+          console.log("Habit storage migrated to latest version");
+        }
+
+        const loadedHabits = loadHabits();
+        setHabits(loadedHabits);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load habits");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkStorage();
   }, []);
 
   const addHabit = useCallback(
@@ -45,9 +81,12 @@ export function useHabits() {
 
       const updatedHabits = [...habits, newHabit];
       setHabits(updatedHabits);
-      saveHabits(updatedHabits);
+
+      if (storageAvailable) {
+        saveHabits(updatedHabits);
+      }
     },
-    [habits],
+    [habits, storageAvailable],
   );
 
   const updateHabit = useCallback(
@@ -56,18 +95,24 @@ export function useHabits() {
         habit.id === id ? { ...habit, ...updates, updatedAt: new Date().toISOString() } : habit,
       );
       setHabits(updatedHabits);
-      saveHabits(updatedHabits);
+
+      if (storageAvailable) {
+        saveHabits(updatedHabits);
+      }
     },
-    [habits],
+    [habits, storageAvailable],
   );
 
   const deleteHabit = useCallback(
     (id: string) => {
       const updatedHabits = habits.filter((habit) => habit.id !== id);
       setHabits(updatedHabits);
-      deleteHabitFromStorage(id);
+
+      if (storageAvailable) {
+        deleteHabitFromStorage(id);
+      }
     },
-    [habits],
+    [habits, storageAvailable],
   );
 
   const completeHabit = useCallback(
@@ -84,14 +129,53 @@ export function useHabits() {
     [habits],
   );
 
+  // Advanced persistence features
+  const backupHabits = useCallback(() => {
+    if (storageAvailable) {
+      createHabitBackup();
+    }
+  }, [storageAvailable]);
+
+  const restoreHabits = useCallback(
+    async (file: File): Promise<boolean> => {
+      if (!storageAvailable) return false;
+
+      const success = await restoreHabitBackup(file);
+      if (success) {
+        const loadedHabits = loadHabits();
+        setHabits(loadedHabits);
+      }
+      return success;
+    },
+    [storageAvailable],
+  );
+
+  const cleanupOldData = useCallback(
+    (monthsToKeep = 12): number => {
+      if (!storageAvailable) return 0;
+      return cleanupOldCompletions(monthsToKeep);
+    },
+    [storageAvailable],
+  );
+
+  const storageStats = useMemo(() => {
+    if (!storageAvailable) return null;
+    return getHabitStorageStats();
+  }, [storageAvailable]);
+
   return {
     habits,
     loading,
     error,
+    storageAvailable,
     addHabit,
     updateHabit,
     deleteHabit,
     completeHabit,
+    backupHabits,
+    restoreHabits,
+    cleanupOldData,
+    storageStats,
   };
 }
 
@@ -267,4 +351,155 @@ export function useHabitRecommendations(habits: Habit[]) {
   }, [habits]);
 
   return recommendations;
+}
+
+export function useHabitScoring(habits: Habit[]) {
+  const scores = useMemo(() => {
+    return habits.map((habit) => calculateHabitScore(habit));
+  }, [habits]);
+
+  const averageScore = useMemo(() => {
+    if (scores.length === 0) return 0;
+    return Math.round(scores.reduce((sum, score) => sum + score.overallScore, 0) / scores.length);
+  }, [scores]);
+
+  const topPerformingHabits = useMemo(() => {
+    return scores
+      .filter((score) => score.overallScore >= 80)
+      .sort((a, b) => b.overallScore - a.overallScore)
+      .slice(0, 5);
+  }, [scores]);
+
+  const strugglingHabits = useMemo(() => {
+    return scores
+      .filter((score) => score.overallScore < 50)
+      .sort((a, b) => a.overallScore - b.overallScore)
+      .slice(0, 5);
+  }, [scores]);
+
+  return {
+    scores,
+    averageScore,
+    topPerformingHabits,
+    strugglingHabits,
+  };
+}
+
+export function useHabitInsights(habits: Habit[]) {
+  const insights = useMemo(() => {
+    return habits.map((habit) => generateHabitInsights(habit));
+  }, [habits]);
+
+  const performanceDistribution = useMemo(() => {
+    const distribution = {
+      excellent: 0,
+      good: 0,
+      fair: 0,
+      struggling: 0,
+      critical: 0,
+    };
+
+    insights.forEach((insight) => {
+      distribution[insight.performance]++;
+    });
+
+    return distribution;
+  }, [insights]);
+
+  const trendDistribution = useMemo(() => {
+    const distribution = {
+      improving: 0,
+      stable: 0,
+      declining: 0,
+    };
+
+    insights.forEach((insight) => {
+      distribution[insight.trend]++;
+    });
+
+    return distribution;
+  }, [insights]);
+
+  const totalRiskFactors = useMemo(() => {
+    return insights.reduce((sum, insight) => sum + insight.riskFactors.length, 0);
+  }, [insights]);
+
+  return {
+    insights,
+    performanceDistribution,
+    trendDistribution,
+    totalRiskFactors,
+  };
+}
+
+export function useAdaptiveRecommendations(habits: Habit[]) {
+  const recommendations = useMemo(() => {
+    return habits.map((habit) => ({
+      habit,
+      recommendations: generateAdaptiveRecommendations(habit),
+    }));
+  }, [habits]);
+
+  const criticalRecommendations = useMemo(() => {
+    return recommendations
+      .flatMap((rec) => rec.recommendations)
+      .filter((rec) => rec.priority === "critical");
+  }, [recommendations]);
+
+  const highPriorityRecommendations = useMemo(() => {
+    return recommendations
+      .flatMap((rec) => rec.recommendations)
+      .filter((rec) => rec.priority === "high");
+  }, [recommendations]);
+
+  const groupedByType = useMemo(() => {
+    const groups: Record<string, AdaptiveRecommendation[]> = {};
+
+    recommendations.forEach((rec) => {
+      rec.recommendations.forEach((recommendation) => {
+        if (!groups[recommendation.type]) {
+          groups[recommendation.type] = [];
+        }
+        groups[recommendation.type].push(recommendation);
+      });
+    });
+
+    return groups;
+  }, [recommendations]);
+
+  return {
+    recommendations,
+    criticalRecommendations,
+    highPriorityRecommendations,
+    groupedByType,
+  };
+}
+
+export function useHabitHealthReports(habits: Habit[]) {
+  const reports = useMemo(() => {
+    return habits.map((habit) => generateHabitHealthReport(habit));
+  }, [habits]);
+
+  const getReportForHabit = useCallback(
+    (habitId: string): HabitHealthReport | undefined => {
+      return reports.find((report) => report.habitId === habitId);
+    },
+    [reports],
+  );
+
+  const getHabitsByPerformance = useCallback(
+    (performance: "excellent" | "good" | "fair" | "struggling" | "critical") => {
+      return reports
+        .filter((report) => report.insights.performance === performance)
+        .map((report) => habits.find((h) => h.id === report.habitId))
+        .filter(Boolean) as Habit[];
+    },
+    [reports, habits],
+  );
+
+  return {
+    reports,
+    getReportForHabit,
+    getHabitsByPerformance,
+  };
 }

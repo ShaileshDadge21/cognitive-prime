@@ -1,176 +1,402 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import { NotebookPen, Sparkles, Send, Smile, Cloud, Sun, Moon } from "lucide-react";
+import { Plus, Search, Filter, Download, Upload } from "lucide-react";
 import { PageShell, PageHeader, GlassCard, SectionHeader } from "@/components/PageShell";
+import { JournalEditor } from "@/components/journal/JournalEditor";
+import { JournalTimeline } from "@/components/journal/JournalTimeline";
+import { CognitiveTrends } from "@/components/journal/CognitiveTrends";
+import { useJournal } from "@/components/journal/use-journal";
+import {
+  saveJournalEntry,
+  deleteJournalEntry,
+  getAverageMetrics,
+  exportJournalData,
+  importJournalData,
+} from "@/components/journal/journal-storage";
+import type { JournalCategory, JournalEntry, JournalSearchQuery } from "@/components/journal/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/app/journal")({
-  head: () => ({ meta: [{ title: "Journal · NeuroFlow AI" }] }),
+  head: () => ({ meta: [{ title: "Cognitive Journal · NeuroFlow AI" }] }),
   component: JournalPage,
 });
 
-const prompts = [
-  "What drained you most today?",
-  "Which task gave you flow?",
-  "What would you redesign about today?",
-  "What did you learn about yourself?",
-];
-
-const entries = [
-  {
-    date: "Today · 9:14 AM",
-    mood: "Focused",
-    icon: Sun,
-    snippet: "Started the day with a clear intention. The morning walk helped me arrive at the desk already in flow.",
-    tags: ["Morning", "Flow", "Clarity"],
-  },
-  {
-    date: "Yesterday · 8:42 PM",
-    mood: "Reflective",
-    icon: Moon,
-    snippet: "Noticed I context-switched too much in the afternoon. Going to batch reviews into a single block tomorrow.",
-    tags: ["Reflection", "Workflow"],
-  },
-  {
-    date: "Thursday · 7:30 AM",
-    mood: "Calm",
-    icon: Cloud,
-    snippet: "Slept 8h. Mental clarity is noticeably higher. The AI suggested protecting this 9–11 AM window for deep work.",
-    tags: ["Sleep", "Recovery"],
-  },
-];
-
 function JournalPage() {
-  const [text, setText] = useState("");
-  const [aiMessages, setAiMessages] = useState([
-    { from: "ai", text: "Take a breath. What's the most honest sentence you could write about today?" },
-  ]);
-  const [draft, setDraft] = useState("");
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<JournalEntry | undefined>();
+  const [searchText, setSearchText] = useState("");
+  const [filterMood, setFilterMood] = useState<string>("");
+  const [filterCategory, setFilterCategory] = useState<JournalCategory | "">("");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest">("newest");
+  const [isExporting, setIsExporting] = useState(false);
+  const { entries, isHydrated, saveEntry, deleteEntry } = useJournal();
 
-  const send = () => {
-    if (!draft.trim()) return;
-    setAiMessages((m) => [
-      ...m,
-      { from: "user", text: draft },
-      { from: "ai", text: "Mm. I notice that pattern showing up across your last three entries. Want to explore what's underneath it?" },
-    ]);
-    setDraft("");
+  // Search and filter
+  const filteredEntries = useMemo(() => {
+    let filtered = [...entries];
+
+    // Text search
+    if (searchText) {
+      const lowerText = searchText.toLowerCase();
+      filtered = filtered.filter(
+        (e) =>
+          e.title.toLowerCase().includes(lowerText) || e.content.toLowerCase().includes(lowerText),
+      );
+    }
+
+    // Mood filter
+    if (filterMood) {
+      filtered = filtered.filter((e) => e.mood === filterMood);
+    }
+
+    // Category filter
+    if (filterCategory) {
+      filtered = filtered.filter((e) => e.categories.includes(filterCategory));
+    }
+
+    // Sort
+    if (sortBy === "oldest") {
+      filtered.reverse();
+    }
+
+    return filtered;
+  }, [entries, searchText, filterMood, filterCategory, sortBy]);
+
+  const metrics = getAverageMetrics(30);
+
+  const handleNewEntry = () => {
+    setEditingEntry(undefined);
+    setEditorOpen(true);
   };
+
+  const handleEditEntry = (entry: JournalEntry) => {
+    setEditingEntry(entry);
+    setEditorOpen(true);
+  };
+
+  const handleSaveEntry = (data: Omit<JournalEntry, "id" | "createdAt" | "updatedAt">) => {
+    const now = new Date().toISOString();
+
+    if (editingEntry) {
+      // Update existing entry
+      saveEntry({
+        ...editingEntry,
+        ...data,
+        updatedAt: now,
+      });
+    } else {
+      // Create new entry
+      saveEntry({
+        id: crypto.randomUUID(),
+        ...data,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    setEditingEntry(undefined);
+    setEditorOpen(false);
+  };
+
+  const handleDeleteEntry = (entryId: string) => {
+    deleteEntry(entryId);
+  };
+
+  const handleExportData = async () => {
+    setIsExporting(true);
+    try {
+      const data = exportJournalData();
+      const element = document.createElement("a");
+      element.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(data));
+      element.setAttribute(
+        "download",
+        `journal-backup-${new Date().toISOString().split("T")[0]}.json`,
+      );
+      element.style.display = "none";
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImportData = async () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        const text = await file.text();
+        if (importJournalData(text)) {
+          // Force refresh by reloading the page
+          window.location.reload();
+        } else {
+          alert("Failed to import journal data. Please check the file format.");
+        }
+      }
+    };
+    input.click();
+  };
+
+  if (!isHydrated) {
+    return (
+      <PageShell>
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+        </div>
+      </PageShell>
+    );
+  }
 
   return (
     <PageShell>
       <PageHeader
-        eyebrow="Journal"
-        title="Think out loud. Let the AI listen."
-        subtitle="Daily reflections feed NeuroFlow's understanding of your patterns, blockers, and inner wins."
+        eyebrow="COGNITIVE REFLECTION"
+        title="Journal"
+        subtitle="Track your thoughts, emotions, and cognitive patterns for deeper self-understanding"
         actions={
-          <button className="px-4 py-2 rounded-xl bg-foreground text-background text-sm font-medium flex items-center gap-2">
-            <NotebookPen className="h-4 w-4" /> New entry
-          </button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleExportData} disabled={isExporting}>
+              <Download className="w-4 h-4 mr-1" />
+              Export
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleImportData}>
+              <Upload className="w-4 h-4 mr-1" />
+              Import
+            </Button>
+            <Button onClick={handleNewEntry} size="sm">
+              <Plus className="w-4 h-4 mr-1" />
+              New Entry
+            </Button>
+          </div>
         }
       />
 
-      <div className="grid grid-cols-12 gap-6">
-        <GlassCard className="col-span-12 lg:col-span-7">
-          <SectionHeader
-            title="Today's reflection"
-            sub="Saturday · May 9 · auto-saving"
-            action={<span className="text-xs px-2 py-0.5 rounded-full bg-coral/15 text-coral flex items-center gap-1"><Sparkles className="h-3 w-3" /> AI prompts on</span>}
-          />
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Begin writing. The AI will surface patterns, never interrupt..."
-            className="w-full min-h-[260px] px-5 py-4 rounded-2xl bg-surface/50 border border-white/10 focus:border-coral/40 focus:outline-none text-sm leading-relaxed resize-none"
-          />
-          <div className="mt-4">
-            <div className="text-xs text-muted-foreground mb-2">Try a prompt</div>
-            <div className="flex flex-wrap gap-2">
-              {prompts.map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setText((t) => (t ? t + "\n\n" + p + "\n" : p + "\n"))}
-                  className="text-xs px-3 py-1.5 rounded-full bg-surface/60 border border-white/5 hover:bg-white/5 transition"
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
-            <span>{text.split(/\s+/).filter(Boolean).length} words</span>
-            <button className="px-4 py-2 rounded-xl bg-gradient-to-r from-coral to-electric text-background font-medium">Save entry</button>
-          </div>
-        </GlassCard>
+      <JournalEditor
+        open={editorOpen}
+        onOpenChange={setEditorOpen}
+        initialEntry={editingEntry}
+        onSave={handleSaveEntry}
+        onDelete={handleDeleteEntry}
+      />
 
-        <GlassCard className="col-span-12 lg:col-span-5 flex flex-col">
-          <SectionHeader title="Reflection assistant" sub="A gentle, curious AI · not a critic" />
-          <div className="flex-1 space-y-3 max-h-[360px] overflow-y-auto pr-1">
-            {aiMessages.map((m, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`flex ${m.from === "user" ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`max-w-[85%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                    m.from === "user"
-                      ? "bg-foreground text-background rounded-br-md"
-                      : "bg-surface/70 border border-white/5 rounded-bl-md"
-                  }`}
-                >
-                  {m.text}
-                </div>
-              </motion.div>
-            ))}
-          </div>
-          <form
-            onSubmit={(e) => { e.preventDefault(); send(); }}
-            className="mt-4 flex items-center gap-2 p-2 rounded-2xl bg-surface/60 border border-white/10 focus-within:border-coral/40 transition"
+      {entries.length === 0 ? (
+        <GlassCard>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center py-12"
           >
-            <input
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder="Reply to the assistant…"
-              className="flex-1 bg-transparent px-2 text-sm focus:outline-none"
-            />
-            <button className="h-8 w-8 rounded-full bg-coral text-background flex items-center justify-center">
-              <Send className="h-3.5 w-3.5" />
-            </button>
-          </form>
+            <div className="text-5xl mb-4">📝</div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Begin Your Journey</h2>
+            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+              Start journaling today to track your cognitive patterns, emotional well-being, and
+              personal growth.
+            </p>
+            <Button onClick={handleNewEntry} size="lg">
+              <Plus className="w-4 h-4 mr-2" />
+              Create First Entry
+            </Button>
+          </motion.div>
         </GlassCard>
+      ) : (
+        <Tabs defaultValue="timeline" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            <TabsTrigger value="trends">Cognitive Trends</TabsTrigger>
+            <TabsTrigger value="insights">Insights</TabsTrigger>
+          </TabsList>
 
-        <GlassCard className="col-span-12">
-          <SectionHeader title="Recent entries" sub="Your reflective archive" />
-          <div className="grid md:grid-cols-3 gap-4">
-            {entries.map((e, i) => (
-              <motion.div
-                key={i}
-                whileHover={{ y: -2 }}
-                className="p-5 rounded-2xl bg-surface/40 border border-white/5 hover:border-white/15 transition cursor-pointer"
-              >
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <e.icon className="h-3.5 w-3.5" />
-                  {e.date}
+          {/* Timeline Tab */}
+          <TabsContent value="timeline" className="space-y-4">
+            <GlassCard>
+              <SectionHeader title="Search & Filter" sub="Find and organize your entries" />
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    placeholder="Search entries..."
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    className="pl-10"
+                  />
                 </div>
-                <div className="mt-3 flex items-center gap-2">
-                  <Smile className="h-4 w-4 text-coral" />
-                  <span className="text-sm">{e.mood}</span>
+
+                <Select value={filterMood} onValueChange={setFilterMood}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by mood" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Moods</SelectItem>
+                    <SelectItem value="elated">Elated 🤩</SelectItem>
+                    <SelectItem value="optimistic">Optimistic 😊</SelectItem>
+                    <SelectItem value="calm">Calm 😌</SelectItem>
+                    <SelectItem value="neutral">Neutral 😐</SelectItem>
+                    <SelectItem value="anxious">Anxious 😰</SelectItem>
+                    <SelectItem value="frustrated">Frustrated 😤</SelectItem>
+                    <SelectItem value="overwhelmed">Overwhelmed 😵</SelectItem>
+                    <SelectItem value="exhausted">Exhausted 😴</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  value={filterCategory}
+                  onValueChange={(value) => setFilterCategory(value as JournalCategory | "")}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Categories</SelectItem>
+                    <SelectItem value="personal">Personal</SelectItem>
+                    <SelectItem value="work">Work</SelectItem>
+                    <SelectItem value="health">Health</SelectItem>
+                    <SelectItem value="learning">Learning</SelectItem>
+                    <SelectItem value="relationships">Relationships</SelectItem>
+                    <SelectItem value="creative">Creative</SelectItem>
+                    <SelectItem value="reflection">Reflection</SelectItem>
+                    <SelectItem value="breakthrough">Breakthrough</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  value={sortBy}
+                  onValueChange={(val) => setSortBy(val as "newest" | "oldest")}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">Newest First</SelectItem>
+                    <SelectItem value="oldest">Oldest First</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="text-sm text-gray-600 mt-3">
+                Showing {filteredEntries.length} of {entries.length} entries
+              </div>
+            </GlassCard>
+
+            <GlassCard>
+              <JournalTimeline
+                entries={filteredEntries}
+                onEdit={handleEditEntry}
+                onDelete={handleDeleteEntry}
+              />
+            </GlassCard>
+          </TabsContent>
+
+          {/* Trends Tab */}
+          <TabsContent value="trends">
+            <GlassCard>
+              <SectionHeader
+                title="Cognitive Trends"
+                sub="Analyze your emotional and cognitive patterns over time"
+              />
+              <div className="mt-6">
+                <CognitiveTrends entries={entries} />
+              </div>
+            </GlassCard>
+          </TabsContent>
+
+          {/* Insights Tab */}
+          <TabsContent value="insights">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Statistics */}
+              <GlassCard>
+                <SectionHeader title="Statistics" sub="Last 30 days" />
+                {metrics && (
+                  <div className="space-y-4 mt-4">
+                    <div>
+                      <p className="text-sm text-gray-600">Total Entries</p>
+                      <p className="text-3xl font-bold text-gray-900">{metrics.totalEntries}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Average Energy</p>
+                      <p className="text-3xl font-bold text-green-600">{metrics.averageEnergy}%</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Average Stress</p>
+                      <p className="text-3xl font-bold text-red-600">{metrics.averageStress}%</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Average Focus</p>
+                      <p className="text-3xl font-bold text-blue-600">{metrics.averageFocus}%</p>
+                    </div>
+                  </div>
+                )}
+              </GlassCard>
+
+              {/* Coming Soon Features */}
+              <GlassCard className="md:col-span-2">
+                <SectionHeader
+                  title="AI Features (Coming Soon)"
+                  sub="Enhanced analysis with machine learning"
+                />
+                <div className="space-y-3 mt-4">
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="p-3 bg-blue-50 rounded-lg"
+                  >
+                    <p className="text-sm font-medium text-blue-900">✨ Sentiment Analysis</p>
+                    <p className="text-xs text-blue-700 mt-1">
+                      Analyze emotional tone across your entries
+                    </p>
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="p-3 bg-purple-50 rounded-lg"
+                  >
+                    <p className="text-sm font-medium text-purple-900">🔮 Burnout Prediction</p>
+                    <p className="text-xs text-purple-700 mt-1">
+                      Early warning indicators for burnout risk
+                    </p>
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="p-3 bg-orange-50 rounded-lg"
+                  >
+                    <p className="text-sm font-medium text-orange-900">📊 Weekly Summaries</p>
+                    <p className="text-xs text-orange-700 mt-1">
+                      AI-generated insights and recommendations
+                    </p>
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="p-3 bg-green-50 rounded-lg"
+                  >
+                    <p className="text-sm font-medium text-green-900">🎯 Pattern Detection</p>
+                    <p className="text-xs text-green-700 mt-1">
+                      Identify cognitive and emotional triggers
+                    </p>
+                  </motion.div>
                 </div>
-                <p className="mt-3 text-sm text-muted-foreground leading-relaxed line-clamp-3">{e.snippet}</p>
-                <div className="mt-4 flex flex-wrap gap-1.5">
-                  {e.tags.map((t) => (
-                    <span key={t} className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-muted-foreground">
-                      #{t}
-                    </span>
-                  ))}
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </GlassCard>
-      </div>
+              </GlassCard>
+            </div>
+          </TabsContent>
+        </Tabs>
+      )}
     </PageShell>
   );
 }

@@ -75,7 +75,9 @@ export const parseDurationMinutes = (value: string) => {
 };
 
 function normalizeCategory(category?: string): PlannerCategory {
-  const normalized = String(category ?? "").trim().toLowerCase();
+  const normalized = String(category ?? "")
+    .trim()
+    .toLowerCase();
   return CATEGORY_LABEL_MAP[normalized] ?? "work";
 }
 
@@ -105,8 +107,10 @@ function deriveScheduleSuitability(
   const base = 90;
   const loadPenalty = analysis.cognitiveLoad * 0.15;
   const fatiguePenalty = analysis.fatigueScore * 0.12;
-  const burnoutPenalty = analysis.burnoutRisk === "high" ? 22 : analysis.burnoutRisk === "medium" ? 12 : 0;
-  const peakBonus = scheduledHour && [9, 10, 11].includes(scheduledHour) && analysis.focusScore > 60 ? 10 : 0;
+  const burnoutPenalty =
+    analysis.burnoutRisk === "high" ? 22 : analysis.burnoutRisk === "medium" ? 12 : 0;
+  const peakBonus =
+    scheduledHour && [9, 10, 11].includes(scheduledHour) && analysis.focusScore > 60 ? 10 : 0;
 
   return normalizeScore(base - loadPenalty - fatiguePenalty - burnoutPenalty + peakBonus, 0, 100);
 }
@@ -115,7 +119,7 @@ export function hydratePlannerTasks(tasks: PlannerTask[]): PlannerTask[] {
   return tasks.map(hydratePlannerTask);
 }
 
-export export function hydratePlannerTask(task: PlannerTask): PlannerTask {
+export function hydratePlannerTask(task: PlannerTask): PlannerTask {
   const category = normalizeCategory(task.category);
   const complexity = normalizeComplexity(task.complexity, category);
   const deepWorkIntensity = normalizeDeepWorkIntensity(task.deepWorkIntensity, category);
@@ -259,7 +263,10 @@ export function computeMetrics(
   );
 
   const overloadPenalty = Math.max(0, blocks.filter((block) => block.energyLoad > 80).length * 3);
-  const fatigueRisk = Math.min(100, Math.round(fatigueSignal * 0.55 + averageFatigueScore * 0.25 + overloadPenalty * 0.2));
+  const fatigueRisk = Math.min(
+    100,
+    Math.round(fatigueSignal * 0.55 + averageFatigueScore * 0.25 + overloadPenalty * 0.2),
+  );
 
   const cognitiveScore = Math.max(
     0,

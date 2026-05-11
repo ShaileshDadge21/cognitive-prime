@@ -90,7 +90,11 @@ export function AuthShell({
 
         <div className="mt-6 text-sm text-center text-muted-foreground">
           {altLabel}{" "}
-          <Link to={altHref} search={{ redirect: undefined }} className="text-coral hover:underline">
+          <Link
+            to={altHref}
+            search={{ redirect: undefined }}
+            className="text-coral hover:underline"
+          >
             {altCta}
           </Link>
         </div>

@@ -79,14 +79,14 @@ export const HABIT_CATEGORIES: Record<
   HabitCategory,
   { label: string; color: string; emoji: string }
 > = {
-  productivity: { label: "Productivity", color: "bg-sky-100 text-sky-700", emoji: "💼" },
-  wellness: { label: "Wellness", color: "bg-emerald-100 text-emerald-700", emoji: "🌱" },
-  learning: { label: "Learning", color: "bg-violet-100 text-violet-700", emoji: "📚" },
-  creative: { label: "Creative", color: "bg-pink-100 text-pink-700", emoji: "🎨" },
-  mindfulness: { label: "Mindfulness", color: "bg-cyan-100 text-cyan-700", emoji: "🧘" },
-  movement: { label: "Movement", color: "bg-orange-100 text-orange-700", emoji: "🏃" },
-  social: { label: "Social", color: "bg-amber-100 text-amber-700", emoji: "👥" },
-  rest: { label: "Rest", color: "bg-neutral-100 text-neutral-700", emoji: "😴" },
+  productivity: { label: "Productivity", color: "bg-sky-500/10 text-sky-300", emoji: "💼" },
+  wellness: { label: "Wellness", color: "bg-emerald-500/10 text-emerald-300", emoji: "🌱" },
+  learning: { label: "Learning", color: "bg-violet/10 text-violet", emoji: "📚" },
+  creative: { label: "Creative", color: "bg-pink-500/10 text-pink-300", emoji: "🎨" },
+  mindfulness: { label: "Mindfulness", color: "bg-electric/10 text-electric", emoji: "🧘" },
+  movement: { label: "Movement", color: "bg-orange-500/10 text-orange-300", emoji: "🏃" },
+  social: { label: "Social", color: "bg-amber-500/10 text-amber-300", emoji: "👥" },
+  rest: { label: "Rest", color: "bg-surface/60 text-muted-foreground", emoji: "😴" },
 };
 
 export const HABIT_FREQUENCIES: HabitFrequency[] = ["daily", "weekly", "biweekly", "monthly"];

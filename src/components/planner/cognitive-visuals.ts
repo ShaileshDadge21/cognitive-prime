@@ -1,4 +1,4 @@
-import type { BurnoutRisk } from "@/components/planner/types";
+import type { BurnoutRisk } from "@/lib/cognitive-engine";
 
 export function getCognitiveTier(score: number): "low" | "medium" | "high" {
   if (score >= 70) return "high";

@@ -32,7 +32,11 @@ export function PlannerInsightsPanel({ metrics, recommendations }: PlannerInsigh
           accent="coral"
           icon={<Brain className="h-3.5 w-3.5" />}
         />
-        <MetricBar label="Avg. cognitive load" value={metrics.averageCognitiveLoad} accent="electric" />
+        <MetricBar
+          label="Avg. cognitive load"
+          value={metrics.averageCognitiveLoad}
+          accent="electric"
+        />
         <MetricBar label="Fatigue risk" value={metrics.fatigueRisk} accent="violet" />
         <MetricBar label="Burnout exposure" value={metrics.burnoutExposure} accent="coral" />
       </div>

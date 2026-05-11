@@ -12,37 +12,37 @@ interface StreakIndicatorProps {
 const streakConfig = {
   common: {
     icon: Flame,
-    color: "text-gray-500",
-    bgColor: "bg-gray-100",
-    borderColor: "border-gray-200",
+    color: "text-muted-foreground",
+    bgColor: "bg-surface/60",
+    borderColor: "border-white/10",
     label: "Common",
   },
   uncommon: {
     icon: Flame,
-    color: "text-green-600",
-    bgColor: "bg-green-100",
-    borderColor: "border-green-200",
+    color: "text-green-300",
+    bgColor: "bg-green-500/10",
+    borderColor: "border-green-500/20",
     label: "Uncommon",
   },
   rare: {
     icon: Star,
-    color: "text-blue-600",
-    bgColor: "bg-blue-100",
-    borderColor: "border-blue-200",
+    color: "text-electric",
+    bgColor: "bg-electric/10",
+    borderColor: "border-electric/20",
     label: "Rare",
   },
   epic: {
     icon: Zap,
-    color: "text-purple-600",
-    bgColor: "bg-purple-100",
-    borderColor: "border-purple-200",
+    color: "text-violet",
+    bgColor: "bg-violet/10",
+    borderColor: "border-violet/20",
     label: "Epic",
   },
   legendary: {
     icon: Trophy,
-    color: "text-yellow-600",
-    bgColor: "bg-yellow-100",
-    borderColor: "border-yellow-200",
+    color: "text-yellow-300",
+    bgColor: "bg-yellow-500/10",
+    borderColor: "border-yellow-500/20",
     label: "Legendary",
   },
 };
@@ -98,12 +98,11 @@ export function StreakHeatmap({ completionHistory, className = "" }: StreakHeatm
   const completionMap = new Map(completionHistory.map((c) => [c.date, c.completed]));
 
   return (
-    <Card className={`p-4 ${className}`}>
-      <h3 className="text-sm font-medium text-gray-700 mb-3">Last 30 Days</h3>
+    <Card className={`rounded-2xl border-white/10 bg-background/40 p-4 ${className}`}>
+      <h3 className="text-sm font-medium text-foreground mb-3">Last 30 Days</h3>
       <div className="grid grid-cols-10 gap-1">
         {days.map((date) => {
           const completed = completionMap.get(date);
-          const intensity = completed ? 1 : 0;
 
           return (
             <motion.div
@@ -111,18 +110,18 @@ export function StreakHeatmap({ completionHistory, className = "" }: StreakHeatm
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: Math.random() * 0.5 }}
-              className={`w-3 h-3 rounded-sm ${completed ? "bg-green-500" : "bg-gray-200"}`}
+              className={`w-3 h-3 rounded-sm ${completed ? "bg-green-400" : "bg-surface-2"}`}
               title={`${date}: ${completed ? "Completed" : "Missed"}`}
             />
           );
         })}
       </div>
-      <div className="flex items-center justify-between mt-3 text-xs text-gray-500">
+      <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground">
         <span>Less</span>
         <div className="flex gap-1">
-          <div className="w-2 h-2 bg-gray-200 rounded-sm"></div>
-          <div className="w-2 h-2 bg-green-300 rounded-sm"></div>
-          <div className="w-2 h-2 bg-green-500 rounded-sm"></div>
+          <div className="w-2 h-2 bg-surface-2 rounded-sm"></div>
+          <div className="w-2 h-2 bg-green-500/50 rounded-sm"></div>
+          <div className="w-2 h-2 bg-green-400 rounded-sm"></div>
         </div>
         <span>More</span>
       </div>
@@ -161,7 +160,7 @@ export function ProgressRing({
           stroke="currentColor"
           strokeWidth={strokeWidth}
           fill="transparent"
-          className="text-gray-200"
+          className="text-surface-2"
         />
         {/* Progress circle */}
         <motion.circle
@@ -175,7 +174,7 @@ export function ProgressRing({
           initial={{ strokeDashoffset: circumference }}
           animate={{ strokeDashoffset }}
           transition={{ duration: 1, ease: "easeInOut" }}
-          className="text-green-500"
+          className="text-green-400"
           strokeLinecap="round"
         />
       </svg>

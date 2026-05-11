@@ -1,8 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import {
-  ResponsiveContainer, LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip,
-  CartesianGrid, RadarChart, PolarGrid, PolarAngleAxis, Radar,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  Radar,
 } from "recharts";
 import { Heart, Sparkles, TrendingUp, Smile } from "lucide-react";
 import { PageShell, PageHeader, GlassCard, SectionHeader } from "@/components/PageShell";
@@ -56,16 +67,22 @@ function MoodPage() {
                   key={m.id}
                   onClick={() => setMood(m.id)}
                   className={`relative aspect-square rounded-2xl border transition flex flex-col items-center justify-center gap-1 ${
-                    active ? "border-coral/60 bg-coral/10" : "border-white/5 bg-surface/40 hover:bg-white/5"
+                    active
+                      ? "border-coral/60 bg-coral/10"
+                      : "border-white/5 bg-surface/40 hover:bg-white/5"
                   }`}
                 >
                   <div
                     className={`h-8 w-8 rounded-full bg-gradient-to-br ${
-                      m.id === "energetic" ? "from-coral to-orange-400" :
-                      m.id === "focused" ? "from-electric to-cyan-400" :
-                      m.id === "calm" ? "from-violet to-purple-400" :
-                      m.id === "tired" ? "from-muted to-slate-500" :
-                      "from-destructive to-red-400"
+                      m.id === "energetic"
+                        ? "from-coral to-orange-400"
+                        : m.id === "focused"
+                          ? "from-electric to-cyan-400"
+                          : m.id === "calm"
+                            ? "from-violet to-purple-400"
+                            : m.id === "tired"
+                              ? "from-muted to-slate-500"
+                              : "from-destructive to-red-400"
                     } ${active ? "animate-pulse-glow" : ""}`}
                   />
                   <div className="text-[10px] text-muted-foreground">{m.label}</div>
@@ -100,14 +117,26 @@ function MoodPage() {
           <SectionHeader
             title="Emotional radar"
             sub="Synthesized from 30 days of check-ins, biometrics, and language signals"
-            action={<span className="text-xs px-2 py-0.5 rounded-full bg-violet/15 text-violet">Stable</span>}
+            action={
+              <span className="text-xs px-2 py-0.5 rounded-full bg-violet/15 text-violet">
+                Stable
+              </span>
+            }
           />
           <div className="h-72">
             <ResponsiveContainer>
               <RadarChart data={emotions}>
                 <PolarGrid stroke="var(--border)" />
-                <PolarAngleAxis dataKey="trait" tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} />
-                <Radar dataKey="value" stroke="var(--coral)" fill="var(--coral)" fillOpacity={0.35} />
+                <PolarAngleAxis
+                  dataKey="trait"
+                  tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+                />
+                <Radar
+                  dataKey="value"
+                  stroke="var(--coral)"
+                  fill="var(--coral)"
+                  fillOpacity={0.35}
+                />
               </RadarChart>
             </ResponsiveContainer>
           </div>
@@ -117,17 +146,51 @@ function MoodPage() {
           <SectionHeader
             title="Mood × energy · 30 days"
             sub="Mental energy correlates 0.74 with reported mood"
-            action={<span className="text-xs px-2 py-0.5 rounded-full bg-coral/15 text-coral flex items-center gap-1"><TrendingUp className="h-3 w-3" /> +12% this week</span>}
+            action={
+              <span className="text-xs px-2 py-0.5 rounded-full bg-coral/15 text-coral flex items-center gap-1">
+                <TrendingUp className="h-3 w-3" /> +12% this week
+              </span>
+            }
           />
           <div className="h-64">
             <ResponsiveContainer>
               <LineChart data={moodHistory}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="d" stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
-                <Tooltip contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 12, fontSize: 12 }} />
-                <Line type="monotone" dataKey="mood" stroke="var(--coral)" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="energy" stroke="var(--electric)" strokeWidth={2} dot={false} />
+                <XAxis
+                  dataKey="d"
+                  stroke="var(--muted-foreground)"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  stroke="var(--muted-foreground)"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "var(--surface-2)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 12,
+                    fontSize: 12,
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="mood"
+                  stroke="var(--coral)"
+                  strokeWidth={2}
+                  dot={false}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="energy"
+                  stroke="var(--electric)"
+                  strokeWidth={2}
+                  dot={false}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -144,7 +207,13 @@ function MoodPage() {
                     <stop offset="100%" stopColor="var(--electric)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <Area type="monotone" dataKey="energy" stroke="var(--electric)" strokeWidth={2} fill="url(#me)" />
+                <Area
+                  type="monotone"
+                  dataKey="energy"
+                  stroke="var(--electric)"
+                  strokeWidth={2}
+                  fill="url(#me)"
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -164,18 +233,34 @@ function MoodPage() {
           <SectionHeader
             title="Recent check-ins"
             sub="Your emotional history with AI-detected triggers"
-            action={<span className="text-xs px-2 py-0.5 rounded-full bg-electric/15 text-electric flex items-center gap-1"><Sparkles className="h-3 w-3" /> AI insight</span>}
+            action={
+              <span className="text-xs px-2 py-0.5 rounded-full bg-electric/15 text-electric flex items-center gap-1">
+                <Sparkles className="h-3 w-3" /> AI insight
+              </span>
+            }
           />
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-3">
             {[
-              { day: "Today", mood: "Focused", note: "Peak window after morning walk", color: "electric" },
-              { day: "Yesterday", mood: "Calm", note: "Light workload, deep reading", color: "violet" },
+              {
+                day: "Today",
+                mood: "Focused",
+                note: "Peak window after morning walk",
+                color: "electric",
+              },
+              {
+                day: "Yesterday",
+                mood: "Calm",
+                note: "Light workload, deep reading",
+                color: "violet",
+              },
               { day: "Thu", mood: "Energetic", note: "Workout + creative sprint", color: "coral" },
               { day: "Wed", mood: "Tired", note: "Late night, low recovery", color: "muted" },
             ].map((c, i) => (
               <div key={i} className="p-4 rounded-2xl bg-surface/40 border border-white/5">
                 <div className="flex items-center gap-2">
-                  <Smile className={`h-4 w-4 ${c.color === "coral" ? "text-coral" : c.color === "electric" ? "text-electric" : c.color === "violet" ? "text-violet" : "text-muted-foreground"}`} />
+                  <Smile
+                    className={`h-4 w-4 ${c.color === "coral" ? "text-coral" : c.color === "electric" ? "text-electric" : c.color === "violet" ? "text-violet" : "text-muted-foreground"}`}
+                  />
                   <div className="text-sm font-medium">{c.mood}</div>
                   <div className="ml-auto text-xs text-muted-foreground">{c.day}</div>
                 </div>

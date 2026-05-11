@@ -141,7 +141,7 @@ export function AddHabitModal({ isOpen, onClose, onAdd, editingHabit }: AddHabit
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto border-white/10 bg-surface/95">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">
             {editingHabit ? "Edit Habit" : "Add New Habit"}
@@ -159,7 +159,7 @@ export function AddHabitModal({ isOpen, onClose, onAdd, editingHabit }: AddHabit
               placeholder="e.g., Drink 8 glasses of water"
               className={errors.title ? "border-red-500" : ""}
             />
-            {errors.title && <p className="text-sm text-red-600">{errors.title}</p>}
+            {errors.title && <p className="text-sm text-red-300">{errors.title}</p>}
           </div>
 
           {/* Category and Frequency */}
@@ -186,7 +186,7 @@ export function AddHabitModal({ isOpen, onClose, onAdd, editingHabit }: AddHabit
                   ))}
                 </SelectContent>
               </Select>
-              {errors.category && <p className="text-sm text-red-600">{errors.category}</p>}
+              {errors.category && <p className="text-sm text-red-300">{errors.category}</p>}
             </div>
 
             <div className="space-y-2">
@@ -208,7 +208,7 @@ export function AddHabitModal({ isOpen, onClose, onAdd, editingHabit }: AddHabit
                   ))}
                 </SelectContent>
               </Select>
-              {errors.frequency && <p className="text-sm text-red-600">{errors.frequency}</p>}
+              {errors.frequency && <p className="text-sm text-red-300">{errors.frequency}</p>}
             </div>
           </div>
 
@@ -236,7 +236,7 @@ export function AddHabitModal({ isOpen, onClose, onAdd, editingHabit }: AddHabit
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500">How mentally demanding is this habit?</p>
+              <p className="text-xs text-muted-foreground">How mentally demanding is this habit?</p>
             </div>
 
             <div className="space-y-2">
@@ -258,7 +258,9 @@ export function AddHabitModal({ isOpen, onClose, onAdd, editingHabit }: AddHabit
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500">How exhausting is this habit when overdone?</p>
+              <p className="text-xs text-muted-foreground">
+                How exhausting is this habit when overdone?
+              </p>
             </div>
           </div>
 
@@ -282,7 +284,7 @@ export function AddHabitModal({ isOpen, onClose, onAdd, editingHabit }: AddHabit
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-gray-500">When do you prefer to do this habit?</p>
+            <p className="text-xs text-muted-foreground">When do you prefer to do this habit?</p>
           </div>
 
           {/* Tags */}
@@ -310,7 +312,7 @@ export function AddHabitModal({ isOpen, onClose, onAdd, editingHabit }: AddHabit
                     <button
                       type="button"
                       onClick={() => removeTag(tag)}
-                      className="ml-1 hover:text-red-600"
+                      className="ml-1 hover:text-red-300"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -318,7 +320,9 @@ export function AddHabitModal({ isOpen, onClose, onAdd, editingHabit }: AddHabit
                 ))}
               </div>
             )}
-            <p className="text-xs text-gray-500">Add tags to organize and filter your habits</p>
+            <p className="text-xs text-muted-foreground">
+              Add tags to organize and filter your habits
+            </p>
           </div>
 
           {/* Notes */}
@@ -331,11 +335,13 @@ export function AddHabitModal({ isOpen, onClose, onAdd, editingHabit }: AddHabit
               placeholder="Additional notes about this habit..."
               rows={3}
             />
-            <p className="text-xs text-gray-500">Any additional context or reminders (Optional)</p>
+            <p className="text-xs text-muted-foreground">
+              Any additional context or reminders (Optional)
+            </p>
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>

@@ -9,7 +9,8 @@ import {
   Tooltip,
   CartesianGrid,
 } from "recharts";
-import type { DragEvent } from "react";
+import { CSS } from "@dnd-kit/utilities";
+import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { SectionHeader } from "@/components/PageShell";
 import { peakHours, timelineHours } from "@/components/planner/planner-utils";
 import { getCognitiveTone, getBurnoutTone } from "@/components/planner/cognitive-visuals";
@@ -17,17 +18,89 @@ import type { TimelineBlock } from "@/components/planner/types";
 
 type PlannerTimelineProps = {
   blocks: TimelineBlock[];
-  onDropAtHour: (hour: number, payload: string) => void;
-  onDragStartBlock: (blockId: string) => string;
   focusData: Array<{ day: string; energy: number }>;
+  dragOverHour: number | null;
 };
 
-export function PlannerTimeline({
-  blocks,
-  onDropAtHour,
-  onDragStartBlock,
-  focusData,
-}: PlannerTimelineProps) {
+type DraggableBlockProps = {
+  block: TimelineBlock;
+};
+
+function DraggableTimelineBlock({ block }: DraggableBlockProps) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `block:${block.id}`,
+    data: { type: "block", blockId: block.id },
+  });
+
+  const style = transform
+    ? {
+        transform: CSS.Transform.toString(transform),
+        touchAction: "manipulation",
+        zIndex: 99,
+      }
+    : { touchAction: "manipulation" };
+
+  const left = ((block.hour - 7) / 12) * 100;
+  const width = (block.span / 12) * 100;
+
+  return (
+    <motion.div
+      layout
+      ref={setNodeRef}
+      style={{ ...style, left: `${left}%`, width: `calc(${width}% - 6px)` }}
+      whileHover={{ y: -2 }}
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`absolute top-3 bottom-3 rounded-xl px-3 py-3 border backdrop-blur-md text-xs cursor-grab active:cursor-grabbing transition-all duration-200 ${
+        block.color === "coral"
+          ? "bg-coral/15 border-coral/30 text-coral"
+          : block.color === "electric"
+            ? "bg-electric/15 border-electric/30 text-electric"
+            : "bg-violet/15 border-violet/30 text-violet"
+      } ${isDragging ? "opacity-80 shadow-2xl" : ""}`}
+      {...listeners}
+      {...attributes}
+    >
+      <div className="font-medium text-foreground truncate">{block.title}</div>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <span
+          className={`rounded-full border px-2 py-1 text-[10px] ${getCognitiveTone(block.cognitiveLoad)}`}
+        >
+          {block.cognitiveLoad}% load
+        </span>
+        <span
+          className={`rounded-full border px-2 py-1 text-[10px] ${getBurnoutTone(block.burnoutRisk)}`}
+        >
+          {block.burnoutRisk}
+        </span>
+      </div>
+      <div className="opacity-80 mt-2 flex items-center gap-1 text-[11px]">
+        <Zap className="h-3 w-3" /> {block.energyLoad}% cognitive load
+      </div>
+    </motion.div>
+  );
+}
+
+function DroppableHourCell({ hour, isActive }: { hour: number; isActive: boolean }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `hour-${hour}`,
+    data: { type: "hour", hour },
+  });
+
+  return (
+    <div
+      id={`timeline-hour-${hour}`}
+      ref={setNodeRef}
+      className={`border-r border-white/5 last:border-0 min-h-50 ${
+        peakHours.includes(hour) ? "bg-coral/4" : ""
+      } ${isOver || isActive ? "bg-cyan-500/10 ring-1 ring-cyan-500/30" : ""}`}
+    />
+  );
+}
+
+export function PlannerTimeline({ blocks, focusData, dragOverHour }: PlannerTimelineProps) {
+  const sortedBlocks = [...blocks].sort((a, b) => a.hour - b.hour);
+
   return (
     <>
       <SectionHeader
@@ -40,8 +113,8 @@ export function PlannerTimeline({
         }
       />
 
-      <div className="relative">
-        <div className="grid grid-cols-6 md:grid-cols-12 text-[10px] text-muted-foreground mb-2 gap-1">
+      <div className="relative overflow-x-auto">
+        <div className="grid grid-cols-12 text-[10px] text-muted-foreground mb-2 gap-1 min-w-full">
           {timelineHours.map((hour) => (
             <div
               key={hour}
@@ -53,64 +126,15 @@ export function PlannerTimeline({
         </div>
 
         <div className="relative min-h-56 rounded-2xl bg-surface/40 border border-white/5 overflow-hidden">
-          <div className="absolute inset-0 grid grid-cols-6 md:grid-cols-12">
+          <div className="absolute inset-0 grid grid-cols-12">
             {timelineHours.map((hour) => (
-              <div
-                key={hour}
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  const payload = event.dataTransfer.getData("text/plain");
-                  if (payload) {
-                    onDropAtHour(hour, payload);
-                  }
-                }}
-                className={`border-r border-white/5 last:border-0 ${peakHours.includes(hour) ? "bg-coral/4" : ""}`}
-              />
+              <DroppableHourCell key={hour} hour={hour} isActive={dragOverHour === hour} />
             ))}
           </div>
 
-          {blocks.map((block) => {
-            const left = ((block.hour - 7) / 12) * 100;
-            const width = (block.span / 12) * 100;
-
-            return (
-              <motion.div
-                key={block.id}
-                layout
-                draggable
-                whileHover={{ y: -2 }}
-                onDragStart={(event) => {
-                  const dragEvent = event as unknown as DragEvent<HTMLDivElement>;
-                  dragEvent.dataTransfer.setData("text/plain", onDragStartBlock(block.id));
-                  dragEvent.dataTransfer.effectAllowed = "move";
-                }}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`absolute top-3 bottom-3 rounded-xl px-3 py-3 border backdrop-blur-md text-xs cursor-grab active:cursor-grabbing transition-all duration-200 ${
-                  block.color === "coral"
-                    ? "bg-coral/15 border-coral/30 text-coral"
-                    : block.color === "electric"
-                      ? "bg-electric/15 border-electric/30 text-electric"
-                      : "bg-violet/15 border-violet/30 text-violet"
-                }`}
-                style={{ left: `${left}%`, width: `calc(${width}% - 6px)` }}
-              >
-                <div className="font-medium text-foreground truncate">{block.title}</div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <span className={`rounded-full border px-2 py-1 text-[10px] ${getCognitiveTone(block.cognitiveLoad)}`}>
-                    {block.cognitiveLoad}% load
-                  </span>
-                  <span className={`rounded-full border px-2 py-1 text-[10px] ${getBurnoutTone(block.burnoutRisk)}`}>
-                    {block.burnoutRisk}
-                  </span>
-                </div>
-                <div className="opacity-80 mt-2 flex items-center gap-1 text-[11px]">
-                  <Zap className="h-3 w-3" /> {block.energyLoad}% cognitive load
-                </div>
-              </motion.div>
-            );
-          })}
+          {sortedBlocks.map((block) => (
+            <DraggableTimelineBlock key={block.id} block={block} />
+          ))}
         </div>
 
         <div className="mt-4 h-24 -mx-2">

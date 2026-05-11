@@ -45,9 +45,7 @@ export function GlassCard({
   children: React.ReactNode;
   className?: string;
 }) {
-  return (
-    <div className={`glass rounded-3xl p-6 shadow-soft ${className}`}>{children}</div>
-  );
+  return <div className={`glass rounded-3xl p-6 shadow-soft ${className}`}>{children}</div>;
 }
 
 export function SectionHeader({

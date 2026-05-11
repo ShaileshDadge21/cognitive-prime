@@ -136,7 +136,8 @@ export function calculateFatigue(task: CognitiveTask): number {
   const baseFatigue = durationHours * 20 * energyMultiplier;
 
   // Additional fatigue from complexity and deep work
-  const complexityFatigue = complexityMultiplier * SCORING_WEIGHTS.deepWorkIntensity[task.deepWorkIntensity] * 15;
+  const complexityFatigue =
+    complexityMultiplier * SCORING_WEIGHTS.deepWorkIntensity[task.deepWorkIntensity] * 15;
 
   const totalFatigue = baseFatigue + complexityFatigue;
 
@@ -156,7 +157,8 @@ export function calculateFocusScore(task: CognitiveTask): number {
   const categoryMultiplier = SCORING_WEIGHTS.category[task.category];
 
   // Focus score combines multiple cognitive demands
-  const focusDemand = priorityMultiplier * complexityMultiplier * deepWorkMultiplier * categoryMultiplier * 25;
+  const focusDemand =
+    priorityMultiplier * complexityMultiplier * deepWorkMultiplier * categoryMultiplier * 25;
 
   return normalizeScore(focusDemand, 0, 100); // Scale to 0-100
 }
@@ -227,7 +229,7 @@ export function analyzeCognitiveImpact(task: CognitiveTask): CognitiveAnalysis {
   const cognitiveLoad = normalizeScore(
     durationLoad + complexityLoad + focusLoad,
     0,
-    120 // Max possible load
+    120, // Max possible load
   );
 
   // Burnout risk based on fatigue and load combination
@@ -324,10 +326,11 @@ export function calculateScheduleSuitability(tasks: CognitiveTask[]): {
     issues.push("Cumulative fatigue exceeds safe threshold");
   }
 
-  const avgBurnoutRisk = analyses.reduce((sum, a) => {
-    const riskValue = a.burnoutRisk === "high" ? 3 : a.burnoutRisk === "medium" ? 2 : 1;
-    return sum + riskValue;
-  }, 0) / analyses.length;
+  const avgBurnoutRisk =
+    analyses.reduce((sum, a) => {
+      const riskValue = a.burnoutRisk === "high" ? 3 : a.burnoutRisk === "medium" ? 2 : 1;
+      return sum + riskValue;
+    }, 0) / analyses.length;
 
   const suitabilityScore = normalizeScore(4 - avgBurnoutRisk, 1, 3);
 

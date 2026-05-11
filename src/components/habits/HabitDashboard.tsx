@@ -1,6 +1,15 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Search, Filter, SortAsc, SortDesc, BarChart3 } from "lucide-react";
+import {
+  Search,
+  SortAsc,
+  SortDesc,
+  BarChart3,
+  Target,
+  Flame,
+  CheckCircle,
+  Plus,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HabitCard } from "./HabitCard";
 import { StreakIndicator, StreakHeatmap, ProgressRing } from "./StreakIndicator";
+import { HabitAnalyticsDashboard } from "./HabitAnalyticsDashboard";
 import {
   useHabits,
   useHabitSearch,
@@ -51,17 +61,17 @@ export function HabitDashboard({ onAddHabit, onEditHabit }: HabitDashboardProps)
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center min-h-100">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-electric"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Card className="p-6 text-center">
-          <p className="text-red-600 mb-4">{error}</p>
+      <div className="flex items-center justify-center min-h-100">
+        <Card className="rounded-3xl border-white/10 bg-surface/80 p-6 text-center shadow-soft">
+          <p className="text-red-300 mb-4">{error}</p>
           <Button onClick={() => window.location.reload()}>Retry</Button>
         </Card>
       </div>
@@ -78,90 +88,103 @@ export function HabitDashboard({ onAddHabit, onEditHabit }: HabitDashboardProps)
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Habits</h1>
-          <p className="text-gray-600 mt-1">Build lasting habits with adaptive intelligence</p>
-        </div>
-        <Button onClick={onAddHabit} className="flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          Add Habit
-        </Button>
-      </div>
-
       {/* Analytics Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <BarChart3 className="w-5 h-5 text-blue-600" />
+      <div className="space-y-3">
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+          <div className="p-4 rounded-2xl bg-surface/40 border border-white/5">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+              <Target className="h-3.5 w-3.5" />
+              Total habits
             </div>
-            <div>
-              <p className="text-sm text-gray-600">Total Habits</p>
-              <p className="text-2xl font-bold text-gray-900">{analytics.totalHabits}</p>
-            </div>
+            <div className="text-2xl font-bold text-foreground">{analytics.totalHabits}</div>
           </div>
-        </Card>
 
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <ProgressRing
-              progress={analytics.averageConsistency}
-              size={40}
-              className="text-green-500"
-            >
-              <span className="text-xs font-bold">{analytics.averageConsistency}%</span>
-            </ProgressRing>
-            <div>
-              <p className="text-sm text-gray-600">Avg Consistency</p>
-              <p className="text-lg font-bold text-gray-900">{analytics.averageConsistency}%</p>
+          <div className="p-4 rounded-2xl bg-surface/40 border border-white/5">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+              <CheckCircle className="h-3.5 w-3.5" />
+              Completed today
             </div>
+            <div className="text-2xl font-bold text-foreground">{analytics.completedToday}</div>
           </div>
-        </Card>
 
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <span className="text-green-600">✅</span>
+          <div className="p-4 rounded-2xl bg-surface/40 border border-white/5">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+              <Flame className="h-3.5 w-3.5" />
+              Longest streak
             </div>
-            <div>
-              <p className="text-sm text-gray-600">Completed Today</p>
-              <p className="text-2xl font-bold text-gray-900">{analytics.completedToday}</p>
-            </div>
+            <div className="text-2xl font-bold text-foreground">{analytics.longestStreak}</div>
           </div>
-        </Card>
 
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <span className="text-purple-600">🔥</span>
+          <div className="p-4 rounded-2xl bg-surface/40 border border-white/5">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+              <BarChart3 className="h-3.5 w-3.5" />
+              Avg consistency
             </div>
-            <div>
-              <p className="text-sm text-gray-600">Longest Streak</p>
-              <p className="text-2xl font-bold text-gray-900">{analytics.longestStreak}</p>
+            <div className="text-2xl font-bold text-foreground">
+              {analytics.averageConsistency}%
             </div>
           </div>
-        </Card>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-surface/50 border border-white/10">
+          <div className="text-xs text-muted-foreground mb-2">Consistency & completion rates</div>
+          <div className="grid gap-2">
+            <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-linear-to-r from-coral via-electric to-violet"
+                style={{ width: `${analytics.averageConsistency}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>Consistency: {analytics.averageConsistency}%</span>
+              <span>
+                Completion rate:{" "}
+                {analytics.totalHabits > 0
+                  ? Math.round((analytics.completedToday / analytics.totalHabits) * 100)
+                  : 0}
+                %
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="habits">My Habits</TabsTrigger>
-          <TabsTrigger value="insights">Insights</TabsTrigger>
-        </TabsList>
+        <div className="flex items-center gap-4 mb-6">
+          <div className="flex rounded-2xl bg-surface/40 border border-white/5 p-1">
+            {[
+              { value: "overview", label: "Overview" },
+              { value: "habits", label: "My habits" },
+              { value: "analytics", label: "Analytics" },
+              { value: "insights", label: "Insights" },
+            ].map((tab) => (
+              <button
+                key={tab.value}
+                onClick={() => setActiveTab(tab.value)}
+                className={`px-4 py-2 text-sm font-medium rounded-xl transition-all ${
+                  activeTab === tab.value
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <TabsContent value="overview" className="space-y-6">
           {/* Today's Habits */}
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Today's Habits</h2>
+          <div className="p-6 rounded-2xl bg-surface/40 border border-white/5">
+            <h2 className="text-xl font-semibold text-foreground mb-4">Today's habits</h2>
             {filteredHabits.filter((habit) => {
               const today = new Date().toISOString().slice(0, 10);
               return habit.completionHistory.some((c) => c.date === today && c.completed);
             }).length === 0 ? (
-              <p className="text-gray-600">No habits completed today yet. Let's get started!</p>
+              <p className="text-muted-foreground">
+                No habits completed today yet. Let's get started!
+              </p>
             ) : (
               <div className="grid gap-4">
                 {filteredHabits
@@ -180,46 +203,51 @@ export function HabitDashboard({ onAddHabit, onEditHabit }: HabitDashboardProps)
                   ))}
               </div>
             )}
-          </Card>
+          </div>
 
           {/* Recommendations */}
           {recommendations.length > 0 && (
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Smart Recommendations</h2>
+            <div className="p-6 rounded-2xl bg-surface/40 border border-white/5">
+              <h2 className="text-xl font-semibold text-foreground mb-4">Smart recommendations</h2>
               <div className="space-y-4">
                 {recommendations.slice(0, 3).map(({ habit, recommendations: recs }) => (
-                  <div key={habit.id} className="flex items-start gap-4 p-4 bg-blue-50 rounded-lg">
-                    <div className="flex-1">
-                      <h3 className="font-medium text-gray-900">{habit.title}</h3>
-                      <p className="text-sm text-gray-600 mt-1">{recs[0]?.message}</p>
+                  <div
+                    key={habit.id}
+                    className="p-4 rounded-2xl bg-linear-to-br from-coral/10 to-electric/10 border border-white/10"
+                  >
+                    <div className="flex items-center gap-2 text-sm mb-2">
+                      <Target className="h-4 w-4 text-electric" />
+                      <span className="font-medium">{habit.title}</span>
                     </div>
-                    <Badge variant="secondary">{recs[0]?.type}</Badge>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {recs[0]?.message}
+                    </p>
                   </div>
                 ))}
               </div>
-            </Card>
+            </div>
           )}
         </TabsContent>
 
         <TabsContent value="habits" className="space-y-6">
           {/* Filters and Search */}
-          <Card className="p-4">
+          <div className="p-4 rounded-2xl bg-surface/40 border border-white/5">
             <div className="flex flex-col lg:flex-row gap-4">
               <div className="flex-1">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                   <Input
                     placeholder="Search habits..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 bg-background/50 border-white/10"
                   />
                 </div>
               </div>
 
               <div className="flex gap-2">
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-32 bg-background/50 border-white/10">
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -233,7 +261,7 @@ export function HabitDashboard({ onAddHabit, onEditHabit }: HabitDashboardProps)
                 </Select>
 
                 <Select value={frequencyFilter} onValueChange={setFrequencyFilter}>
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-32 bg-background/50 border-white/10">
                     <SelectValue placeholder="Frequency" />
                   </SelectTrigger>
                   <SelectContent>
@@ -250,7 +278,7 @@ export function HabitDashboard({ onAddHabit, onEditHabit }: HabitDashboardProps)
                     setSortBy(value as "created" | "title" | "streak" | "consistency")
                   }
                 >
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-32 bg-background/50 border-white/10">
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent>
@@ -265,6 +293,7 @@ export function HabitDashboard({ onAddHabit, onEditHabit }: HabitDashboardProps)
                   variant="outline"
                   size="sm"
                   onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                  className="bg-background/50 border-white/10"
                 >
                   {sortOrder === "asc" ? (
                     <SortAsc className="w-4 h-4" />
@@ -274,27 +303,29 @@ export function HabitDashboard({ onAddHabit, onEditHabit }: HabitDashboardProps)
                 </Button>
               </div>
             </div>
-          </Card>
+          </div>
 
           {/* Habits List */}
           {filteredHabits.length === 0 ? (
-            <Card className="p-12 text-center">
+            <div className="p-12 rounded-2xl bg-surface/40 border border-white/5 text-center">
               <div className="max-w-md mx-auto">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Plus className="w-8 h-8 text-gray-400" />
+                <div className="w-16 h-16 bg-surface/60 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Plus className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No habits found</h3>
-                <p className="text-gray-600 mb-6">
+                <h3 className="text-lg font-medium text-foreground mb-2">No habits found</h3>
+                <p className="text-muted-foreground mb-6">
                   {searchQuery || categoryFilter !== "all" || frequencyFilter !== "all"
                     ? "Try adjusting your filters or search query."
                     : "Start building better habits by adding your first one."}
                 </p>
-                <Button onClick={onAddHabit}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Your First Habit
-                </Button>
+                <button
+                  onClick={onAddHabit}
+                  className="text-xs px-4 py-2 rounded-full glass flex items-center gap-1 mx-auto"
+                >
+                  <Plus className="h-3 w-3" /> Add your first habit
+                </button>
               </div>
-            </Card>
+            </div>
           ) : (
             <motion.div
               className="grid gap-4"
@@ -315,6 +346,10 @@ export function HabitDashboard({ onAddHabit, onEditHabit }: HabitDashboardProps)
           )}
         </TabsContent>
 
+        <TabsContent value="analytics" className="space-y-6">
+          <HabitAnalyticsDashboard habits={habits} />
+        </TabsContent>
+
         <TabsContent value="insights" className="space-y-6">
           {/* Habit Analytics */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -323,9 +358,9 @@ export function HabitDashboard({ onAddHabit, onEditHabit }: HabitDashboardProps)
               if (!habit) return null;
 
               return (
-                <Card key={habit.id} className="p-6">
+                <div key={habit.id} className="p-6 rounded-2xl bg-surface/40 border border-white/5">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-gray-900">{habit.title}</h3>
+                    <h3 className="font-semibold text-foreground">{habit.title}</h3>
                     <StreakIndicator
                       streak={habit.streakCount}
                       level={
@@ -345,23 +380,23 @@ export function HabitDashboard({ onAddHabit, onEditHabit }: HabitDashboardProps)
 
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Consistency</span>
+                      <span className="text-sm text-muted-foreground">Consistency</span>
                       <span className="font-medium">{habitAnalytics.consistencyScore}%</span>
                     </div>
 
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Total Completions</span>
+                      <span className="text-sm text-muted-foreground">Total Completions</span>
                       <span className="font-medium">{habitAnalytics.totalCompletions}</span>
                     </div>
 
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Longest Streak</span>
+                      <span className="text-sm text-muted-foreground">Longest Streak</span>
                       <span className="font-medium">{habitAnalytics.longestStreak}</span>
                     </div>
 
                     <StreakHeatmap completionHistory={habit.completionHistory} />
                   </div>
-                </Card>
+                </div>
               );
             })}
           </div>
