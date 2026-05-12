@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { User, Bell, Palette, Brain, Shield, ChevronRight, Check } from "lucide-react";
 import { PageShell, PageHeader, GlassCard, SectionHeader } from "@/components/PageShell";
 import { authClient } from "@/lib/auth/client";
 import { integrationStatus } from "@/lib/config/env";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { settingsService } from "@/services/settings";
 import type { InputHTMLAttributes } from "react";
 
 export const Route = createFileRoute("/app/settings")({
@@ -36,6 +38,72 @@ function SettingsPage() {
     aiVoice: 60,
     fatigueGuard: 80,
   });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const cloudEnabled = isSupabaseConfigured();
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      if (!cloudEnabled) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const settings = await settingsService.get();
+        if (settings) {
+          setTheme(settings.theme as "dark" | "light" | "system");
+          setAccent(settings.accent as "coral" | "electric" | "violet");
+          setNotif(settings.notification_settings as typeof notif);
+          setTuning(settings.preferences as typeof tuning);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load settings");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSettings();
+  }, [cloudEnabled]);
+
+  const saveSettings = useCallback(async () => {
+    if (!cloudEnabled) return;
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      await settingsService.upsert({
+        theme,
+        accent,
+        preferences: tuning,
+        notification_settings: notif,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save settings");
+    } finally {
+      setSaving(false);
+    }
+  }, [cloudEnabled, theme, accent, tuning, notif]);
+
+  useEffect(() => {
+    if (cloudEnabled && !loading) {
+      const timeoutId = setTimeout(saveSettings, 1000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [saveSettings, cloudEnabled, loading]);
+
+  if (loading) {
+    return (
+      <PageShell>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-muted-foreground">Loading settings...</div>
+        </div>
+      </PageShell>
+    );
+  }
 
   return (
     <PageShell>
@@ -44,6 +112,12 @@ function SettingsPage() {
         title="Tune your cognitive workspace."
         subtitle="Personalize how NeuroFlow learns, nudges, and adapts to your mind."
       />
+
+      {error && (
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-red-200 mb-6">
+          {error}
+        </div>
+      )}
 
       <div className="grid grid-cols-12 gap-6">
         <GlassCard className="col-span-12 lg:col-span-3 h-fit">

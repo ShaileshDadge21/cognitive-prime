@@ -18,6 +18,8 @@ import {
 import { Heart, Sparkles, TrendingUp, Smile } from "lucide-react";
 import { PageShell, PageHeader, GlassCard, SectionHeader } from "@/components/PageShell";
 import { moodOptions, focusData } from "@/lib/mock-data";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { moodService } from "@/services/mood";
 
 export const Route = createFileRoute("/app/mood")({
   head: () => ({ meta: [{ title: "Mood Tracking · NeuroFlow AI" }] }),
@@ -42,6 +44,38 @@ const emotions = [
 function MoodPage() {
   const [mood, setMood] = useState("focused");
   const [intensity, setIntensity] = useState(70);
+  const [note, setNote] = useState("");
+  const [isLogging, setIsLogging] = useState(false);
+  const [logError, setLogError] = useState<string | null>(null);
+  const cloudEnabled = isSupabaseConfigured();
+
+  const handleLogMood = async () => {
+    if (!cloudEnabled) {
+      setLogError("Cloud storage not configured. Mood logging requires Supabase setup.");
+      return;
+    }
+
+    setIsLogging(true);
+    setLogError(null);
+
+    try {
+      await moodService.create({
+        logged_at: new Date().toISOString(),
+        mood,
+        mood_score: intensity,
+        note: note.trim() || null,
+      });
+
+      // Reset form
+      setNote("");
+      setMood("focused");
+      setIntensity(70);
+    } catch (error) {
+      setLogError(error instanceof Error ? error.message : "Failed to log mood");
+    } finally {
+      setIsLogging(false);
+    }
+  };
 
   return (
     <PageShell>
@@ -50,11 +84,21 @@ function MoodPage() {
         title="Emotional state, decoded."
         subtitle="Daily emotional check-ins train NeuroFlow to adapt your workload, breaks, and AI tone to how you actually feel."
         actions={
-          <button className="px-4 py-2 rounded-xl bg-foreground text-background text-sm font-medium flex items-center gap-2">
-            <Heart className="h-4 w-4" /> Log mood
+          <button
+            onClick={handleLogMood}
+            disabled={isLogging}
+            className="px-4 py-2 rounded-xl bg-foreground text-background text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+          >
+            <Heart className="h-4 w-4" /> {isLogging ? "Logging..." : "Log mood"}
           </button>
         }
       />
+
+      {logError && (
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-red-200 mb-6">
+          {logError}
+        </div>
+      )}
 
       <div className="grid grid-cols-12 gap-6">
         <GlassCard className="col-span-12 lg:col-span-5">
@@ -105,11 +149,17 @@ function MoodPage() {
             />
           </div>
           <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
             placeholder="What's on your mind? (optional)"
             className="mt-4 w-full px-4 py-3 rounded-2xl bg-surface/60 border border-white/10 focus:border-coral/40 focus:outline-none text-sm resize-none h-24"
           />
-          <button className="mt-3 w-full py-2.5 rounded-xl bg-gradient-to-r from-coral to-electric text-background text-sm font-medium">
-            Save check-in
+          <button
+            onClick={handleLogMood}
+            disabled={isLogging}
+            className="mt-3 w-full py-2.5 rounded-xl bg-gradient-to-r from-coral to-electric text-background text-sm font-medium disabled:opacity-50"
+          >
+            {isLogging ? "Saving..." : "Save check-in"}
           </button>
         </GlassCard>
 

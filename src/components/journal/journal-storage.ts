@@ -76,13 +76,16 @@ export function getJournalEntry(entryId: string): JournalEntry | undefined {
 /**
  * Search and filter journal entries
  */
-export function searchJournalEntries(query: JournalSearchQuery): JournalEntry[] {
-  let entries = loadJournalEntries();
+export function searchJournalEntries(
+  query: JournalSearchQuery,
+  entries?: JournalEntry[],
+): JournalEntry[] {
+  let searchEntries = entries || loadJournalEntries();
 
   // Text search
   if (query.text) {
     const lowerText = query.text.toLowerCase();
-    entries = entries.filter(
+    searchEntries = searchEntries.filter(
       (e) =>
         e.title.toLowerCase().includes(lowerText) || e.content.toLowerCase().includes(lowerText),
     );
@@ -90,24 +93,26 @@ export function searchJournalEntries(query: JournalSearchQuery): JournalEntry[] 
 
   // Mood filter
   if (query.moods && query.moods.length > 0) {
-    entries = entries.filter((e) => query.moods!.includes(e.mood));
+    searchEntries = searchEntries.filter((e) => query.moods!.includes(e.mood));
   }
 
   // Category filter
   if (query.categories && query.categories.length > 0) {
-    entries = entries.filter((e) => e.categories.some((cat) => query.categories!.includes(cat)));
+    searchEntries = searchEntries.filter((e) =>
+      e.categories.some((cat) => query.categories!.includes(cat)),
+    );
   }
 
   // Tag filter
   if (query.tags && query.tags.length > 0) {
-    entries = entries.filter((e) => query.tags!.some((tag) => e.tags.includes(tag)));
+    searchEntries = searchEntries.filter((e) => query.tags!.some((tag) => e.tags.includes(tag)));
   }
 
   // Date range filter
   if (query.dateRange) {
     const startDate = new Date(query.dateRange.start).getTime();
     const endDate = new Date(query.dateRange.end).getTime();
-    entries = entries.filter((e) => {
+    searchEntries = searchEntries.filter((e) => {
       const entryDate = new Date(e.createdAt).getTime();
       return entryDate >= startDate && entryDate <= endDate;
     });
@@ -117,7 +122,7 @@ export function searchJournalEntries(query: JournalSearchQuery): JournalEntry[] 
   if (query.minStressLevel) {
     const stressLevels = ["minimal", "low", "moderate", "high", "critical"];
     const minIndex = stressLevels.indexOf(query.minStressLevel);
-    entries = entries.filter((e) => {
+    searchEntries = searchEntries.filter((e) => {
       const entryIndex = stressLevels.indexOf(e.stressLevel);
       return entryIndex >= minIndex;
     });
@@ -125,10 +130,12 @@ export function searchJournalEntries(query: JournalSearchQuery): JournalEntry[] 
 
   // Burnout risk filter
   if (query.burnoutRiskFilter) {
-    entries = entries.filter((e) => e.burnoutIndicators?.risk === query.burnoutRiskFilter);
+    searchEntries = searchEntries.filter(
+      (e) => e.burnoutIndicators?.risk === query.burnoutRiskFilter,
+    );
   }
 
-  return entries;
+  return searchEntries;
 }
 
 /**

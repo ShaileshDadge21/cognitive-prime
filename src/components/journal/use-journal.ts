@@ -17,39 +17,75 @@ import {
   getJournalEntry,
   getAllTags,
 } from "./journal-storage";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { journalService } from "@/services/journal";
 
-/**
- * Hook for managing journal entries
- */
 export function useJournal() {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const saveDebounced = useRef(createDebouncedWriter(storageToFile, 300));
+  const cloudEnabled = isSupabaseConfigured();
 
   /**
    * Save a journal entry (create or update)
    */
-  const saveEntry = useCallback((entry: JournalEntry) => {
-    const saved = storageSave(entry);
-    setEntries((prev) => {
-      const existing = prev.findIndex((e) => e.id === saved.id);
-      if (existing >= 0) {
-        const updated = [...prev];
-        updated[existing] = saved;
-        return updated;
+  const saveEntry = useCallback(
+    async (entry: JournalEntry) => {
+      try {
+        if (cloudEnabled) {
+          const saved = await journalService.upsert(entry);
+          setEntries((prev) => {
+            const existing = prev.findIndex((e) => e.id === saved.id);
+            if (existing >= 0) {
+              const updated = [...prev];
+              updated[existing] = saved;
+              return updated;
+            }
+            return [saved, ...prev];
+          });
+          return saved;
+        }
+
+        const saved = storageSave(entry);
+        setEntries((prev) => {
+          const existing = prev.findIndex((e) => e.id === saved.id);
+          if (existing >= 0) {
+            const updated = [...prev];
+            updated[existing] = saved;
+            return updated;
+          }
+          return [saved, ...prev];
+        });
+        return saved;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to save journal entry");
+        throw err;
       }
-      return [saved, ...prev];
-    });
-    return saved;
-  }, []);
+    },
+    [cloudEnabled],
+  );
 
   /**
    * Delete a journal entry
    */
-  const deleteEntry = useCallback((entryId: string) => {
-    storageDelete(entryId);
-    setEntries((prev) => prev.filter((e) => e.id !== entryId));
-  }, []);
+  const deleteEntry = useCallback(
+    async (entryId: string) => {
+      try {
+        if (cloudEnabled) {
+          await journalService.remove(entryId);
+        } else {
+          storageDelete(entryId);
+        }
+        setEntries((prev) => prev.filter((e) => e.id !== entryId));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to delete journal entry");
+        throw err;
+      }
+    },
+    [cloudEnabled],
+  );
 
   /**
    * Get a single entry by ID
@@ -59,17 +95,44 @@ export function useJournal() {
   }, []);
 
   /**
-   * Hydrate entries from storage on mount
+   * Hydrate entries from storage on mount with proper error recovery
    */
   useEffect(() => {
-    const loaded = loadJournalEntries();
-    setEntries(loaded);
-    setIsHydrated(true);
-  }, []);
+    const hydrateEntries = async () => {
+      try {
+        if (cloudEnabled) {
+          const cloudEntries = await journalService.list();
+          setEntries(cloudEntries);
+          setIsHydrated(true);
+        } else {
+          const loaded = loadJournalEntries();
+          setEntries(loaded);
+          setIsHydrated(true);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load journal entries");
+        // Always fallback to local storage even if cloud fails
+        try {
+          const loaded = loadJournalEntries();
+          setEntries(loaded);
+          setIsHydrated(true);
+        } catch (fallbackErr) {
+          console.error("Journal hydration failed completely:", fallbackErr);
+          setIsHydrated(true); // Still mark as hydrated to unblock UI
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    hydrateEntries();
+  }, [cloudEnabled]);
 
   return {
     entries,
     isHydrated,
+    loading,
+    error,
     saveEntry,
     deleteEntry,
     getEntry,
@@ -81,11 +144,12 @@ export function useJournal() {
  */
 export function useJournalSearch(query: JournalSearchQuery = {}) {
   const [results, setResults] = useState<JournalEntry[]>([]);
+  const { entries } = useJournal();
 
   useEffect(() => {
-    const filtered = searchJournalEntries(query);
+    const filtered = searchJournalEntries(query, entries);
     setResults(filtered);
-  }, [query]);
+  }, [query, entries]);
 
   return results;
 }

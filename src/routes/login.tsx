@@ -60,7 +60,7 @@ export function AuthShell({
 }) {
   return (
     <div className="min-h-screen relative flex items-center justify-center px-6 py-12">
-      <div className="absolute inset-0 grid-bg opacity-30 [mask-image:radial-gradient(ellipse_at_center,black,transparent_70%)]" />
+      <div className="absolute inset-0 grid-bg opacity-30 mask-[radial-gradient(ellipse_at_center,black,transparent_70%)]" />
       <div className="absolute top-1/3 -left-20 h-80 w-80 rounded-full bg-coral/30 blur-3xl" />
       <div className="absolute bottom-1/4 -right-20 h-80 w-80 rounded-full bg-electric/30 blur-3xl" />
 
@@ -115,12 +115,22 @@ function AuthForm({
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
+  const [error, setError] = React.useState<string | null>(null);
+  const [submitting, setSubmitting] = React.useState(false);
 
   return (
     <form
       onSubmit={async (e) => {
         e.preventDefault();
-        await onSubmit({ name: signup ? name : undefined, email, password });
+        setError(null);
+        setSubmitting(true);
+        try {
+          await onSubmit({ name: signup ? name : undefined, email, password });
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Authentication failed.");
+        } finally {
+          setSubmitting(false);
+        }
       }}
       className="space-y-3"
     >
@@ -152,10 +162,16 @@ function AuthForm({
       />
       <button
         type="submit"
+        disabled={submitting}
         className="w-full mt-2 py-3 rounded-xl bg-foreground text-background font-medium flex items-center justify-center gap-2 hover:scale-[1.01] transition"
       >
-        {cta} <ArrowRight className="h-4 w-4" />
+        {submitting ? "Please wait..." : cta} <ArrowRight className="h-4 w-4" />
       </button>
+      {error ? (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-red-200">
+          {error}
+        </div>
+      ) : null}
     </form>
   );
 }

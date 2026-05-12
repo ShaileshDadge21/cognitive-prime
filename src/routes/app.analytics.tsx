@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   ResponsiveContainer,
@@ -10,17 +9,30 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  Radar,
+  AreaChart,
+  Area,
 } from "recharts";
-import { Sparkles, TrendingUp, Activity, ShieldCheck } from "lucide-react";
+import { Sparkles, RefreshCw } from "lucide-react";
 import { PageShell, PageHeader, GlassCard, SectionHeader } from "@/components/PageShell";
+import {
+  useAnalytics,
+  useProductivityScore,
+  useFatigueMetrics,
+  useBurnoutRisk,
+  useMoodTrend,
+  useFocusTrend,
+  useDeepWorkCapacity,
+  useHabitConsistency,
+} from "@/components/analytics/use-analytics";
+import {
+  ProductivityScoreCard,
+  FatigueMetricsCard,
+  BurnoutRiskCard,
+  DeepWorkCapacityCard,
+  HabitConsistencyCard,
+} from "@/components/analytics/AnalyticsCards";
+import { derivePlannerAnalytics } from "@/lib/analytics";
 import { useHabits } from "@/components/habits/use-habits";
-import { tasks as initialTasks, focusData } from "@/lib/mock-data";
-import { derivePlannerAnalytics, summarizeHabitPerformance } from "@/lib/analytics";
-import { toPlannerTasks } from "@/components/planner/planner-utils";
 
 export const Route = createFileRoute("/app/analytics")({
   head: () => ({ meta: [{ title: "Analytics · NeuroFlow AI" }] }),
@@ -28,18 +40,29 @@ export const Route = createFileRoute("/app/analytics")({
 });
 
 function AnalyticsPage() {
+  const { loading, error, data: analytics, refetch } = useAnalytics();
   const { habits } = useHabits();
-  const habitSummary = useMemo(() => summarizeHabitPerformance(habits), [habits]);
 
-  const plannerTasks = useMemo(() => toPlannerTasks(initialTasks), []);
-  const avgFatigueSignal = useMemo(
-    () => Math.round(focusData.reduce((sum, day) => sum + day.fatigue, 0) / focusData.length),
-    [],
-  );
-  const plannerAnalytics = useMemo(
-    () => derivePlannerAnalytics(plannerTasks, avgFatigueSignal),
-    [plannerTasks, avgFatigueSignal],
-  );
+  const productivityScore = useProductivityScore(analytics);
+  const fatigueMetrics = useFatigueMetrics(analytics);
+  const burnoutRisk = useBurnoutRisk(analytics);
+  const moodTrend = useMoodTrend(analytics);
+  const focusTrend = useFocusTrend(analytics);
+  const deepWorkCapacity = useDeepWorkCapacity(analytics);
+  const habitConsistency = useHabitConsistency(analytics);
+
+  if (loading) {
+    return (
+      <PageShell>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-coral mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading analytics...</p>
+          </div>
+        </div>
+      </PageShell>
+    );
+  }
 
   const taskTrendData = plannerAnalytics.hydratedTasks.map((task) => ({
     title: task.title,

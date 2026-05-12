@@ -14,6 +14,8 @@ import {
   cleanupOldCompletions,
   migrateHabitStorage,
 } from "./habit-storage";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { habitService } from "@/services/habits";
 import {
   calculateHabitScore,
   generateHabitInsights,
@@ -31,39 +33,55 @@ export function useHabits() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [storageAvailable, setStorageAvailable] = useState(true);
+  const cloudEnabled = isSupabaseConfigured();
 
   useEffect(() => {
     const checkStorage = async () => {
       const available = isStorageAvailable();
       setStorageAvailable(available);
 
-      if (!available) {
+      if (!available && !cloudEnabled) {
         setError("Local storage is not available. Habit data will not persist.");
         setLoading(false);
         return;
       }
 
       try {
-        // Attempt migration if needed
-        const migrated = migrateHabitStorage();
-        if (migrated) {
-          console.log("Habit storage migrated to latest version");
+        if (cloudEnabled) {
+          const loadedHabits = await habitService.list();
+          setHabits(loadedHabits);
+          setLoading(false);
+          return;
         }
 
+        // Attempt migration if needed
+        const migrated = migrateHabitStorage();
+
         const loadedHabits = loadHabits();
+        if (migrated) {
+          saveHabits(loadedHabits);
+        }
         setHabits(loadedHabits);
+        setLoading(false);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load habits");
-      } finally {
+        // Try to load from local storage as fallback
+        try {
+          const loadedHabits = loadHabits();
+          setHabits(loadedHabits);
+        } catch (fallbackErr) {
+          console.error("Habit loading failed completely:", fallbackErr);
+          setHabits([]);
+        }
         setLoading(false);
       }
     };
 
     checkStorage();
-  }, []);
+  }, [cloudEnabled]);
 
   const addHabit = useCallback(
-    (
+    async (
       habit: Omit<
         Habit,
         "id" | "createdAt" | "updatedAt" | "completionHistory" | "streakCount" | "consistencyScore"
@@ -82,41 +100,82 @@ export function useHabits() {
       const updatedHabits = [...habits, newHabit];
       setHabits(updatedHabits);
 
+      try {
+        if (cloudEnabled) {
+          await habitService.upsert(newHabit);
+          return;
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to save habit");
+        setHabits(habits);
+        return;
+      }
+
       if (storageAvailable) {
         saveHabits(updatedHabits);
       }
     },
-    [habits, storageAvailable],
+    [cloudEnabled, habits, storageAvailable],
   );
 
   const updateHabit = useCallback(
-    (id: string, updates: Partial<Habit>) => {
+    async (id: string, updates: Partial<Habit>) => {
       const updatedHabits = habits.map((habit) =>
         habit.id === id ? { ...habit, ...updates, updatedAt: new Date().toISOString() } : habit,
       );
       setHabits(updatedHabits);
 
+      try {
+        if (cloudEnabled) {
+          const updatedHabit = updatedHabits.find((habit) => habit.id === id);
+          if (updatedHabit) {
+            await habitService.upsert(updatedHabit);
+          }
+          return;
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to update habit");
+        setHabits(habits);
+        return;
+      }
+
       if (storageAvailable) {
         saveHabits(updatedHabits);
       }
     },
-    [habits, storageAvailable],
+    [cloudEnabled, habits, storageAvailable],
   );
 
   const deleteHabit = useCallback(
-    (id: string) => {
+    async (id: string) => {
       const updatedHabits = habits.filter((habit) => habit.id !== id);
       setHabits(updatedHabits);
+
+      try {
+        if (cloudEnabled) {
+          await habitService.remove(id);
+          return;
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to delete habit");
+        setHabits(habits);
+        return;
+      }
 
       if (storageAvailable) {
         deleteHabitFromStorage(id);
       }
     },
-    [habits, storageAvailable],
+    [cloudEnabled, habits, storageAvailable],
   );
 
   const completeHabit = useCallback(
-    (habitId: string, date: string, completed: boolean) => {
+    async (habitId: string, date: string, completed: boolean) => {
+      const currentHabit = habits.find((habit) => habit.id === habitId);
+      if (!currentHabit) {
+        return;
+      }
+
       const updatedHabits = habits.map((habit) => {
         if (habit.id === habitId) {
           return recordHabitCompletion(habit, date, completed);
@@ -124,9 +183,23 @@ export function useHabits() {
         return habit;
       });
       setHabits(updatedHabits);
+
+      try {
+        if (cloudEnabled) {
+          await habitService.recordCompletion(currentHabit, date, completed);
+          const loadedHabits = await habitService.list();
+          setHabits(loadedHabits);
+          return;
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to complete habit");
+        setHabits(habits);
+        return;
+      }
+
       saveHabits(updatedHabits);
     },
-    [habits],
+    [cloudEnabled, habits],
   );
 
   // Advanced persistence features
@@ -168,6 +241,7 @@ export function useHabits() {
     loading,
     error,
     storageAvailable,
+    cloudEnabled,
     addHabit,
     updateHabit,
     deleteHabit,

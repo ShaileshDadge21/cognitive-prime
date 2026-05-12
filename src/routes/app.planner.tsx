@@ -14,7 +14,7 @@ import {
 } from "@dnd-kit/core";
 import { Sparkles } from "lucide-react";
 import { PageShell, PageHeader, GlassCard } from "@/components/PageShell";
-import { tasks as initialTasks, focusData } from "@/lib/mock-data";
+import { focusData } from "@/lib/mock-data";
 import { PlannerInsightsPanel } from "@/components/planner/PlannerInsightsPanel";
 import { PlannerTaskBoard } from "@/components/planner/PlannerTaskBoard";
 import { PlannerTimeline } from "@/components/planner/PlannerTimeline";
@@ -36,6 +36,8 @@ import {
   type PlannerStorageSchema,
   PLANNER_STORAGE_VERSION,
 } from "@/lib/planner-storage";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { plannerService } from "@/services/planner";
 import type { PlannerTask, TimelineBlock } from "@/components/planner/types";
 import AddTaskModal, { type TaskData } from "@/components/tasks/AddTaskModal";
 
@@ -51,19 +53,16 @@ type PlannerDragItem =
   | { type: "task-queue" };
 
 function PlannerPage() {
-  const [tasks, setTasks] = useState<PlannerTask[]>(() => toPlannerTasks(initialTasks));
-  const [blocks, setBlocks] = useState<TimelineBlock[]>(() => [
-    createBlockFromTask(toPlannerTasks(initialTasks)[0], 9),
-    createBlockFromTask(toPlannerTasks(initialTasks)[1], 11),
-    createBlockFromTask(toPlannerTasks(initialTasks)[4], 14),
-    createBlockFromTask(toPlannerTasks(initialTasks)[3], 16),
-  ]);
+  const [tasks, setTasks] = useState<PlannerTask[]>([]);
+  const [blocks, setBlocks] = useState<TimelineBlock[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
   const [isSyncPanelOpen, setIsSyncPanelOpen] = useState(false);
   const [syncPayload, setSyncPayload] = useState("");
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
+  const [persistenceError, setPersistenceError] = useState<string | null>(null);
   const [dragOverHour, setDragOverHour] = useState<number | null>(null);
+  const cloudEnabled = isSupabaseConfigured();
 
   const savePlannerStateDebounced = useRef(
     createDebouncedWriter<PlannerStorageSchema>(savePlannerState, 250),
@@ -84,18 +83,69 @@ function PlannerPage() {
       createBlockFromTask(toPlannerTasks(initialTasks)[4], 14),
       createBlockFromTask(toPlannerTasks(initialTasks)[3], 16),
     ]);
-  }, []);
+    if (cloudEnabled) {
+      plannerService.clear().catch((error: unknown) => {
+        setPersistenceError(
+          error instanceof Error ? error.message : "Failed to clear cloud planner state.",
+        );
+      });
+    }
+  }, [cloudEnabled]);
 
   useEffect(() => {
-    const persisted = loadPlannerState();
+    let cancelled = false;
 
-    if (persisted) {
-      setTasks(hydratePlannerTasks(persisted.tasks));
-      setBlocks(persisted.blocks);
+    async function hydratePlannerState() {
+      try {
+        if (cloudEnabled) {
+          const cloudState = await plannerService.load();
+          if (!cancelled && cloudState) {
+            setTasks(hydratePlannerTasks(cloudState.tasks));
+            setBlocks(cloudState.blocks);
+            setIsHydrated(true);
+            return;
+          }
+        }
+
+        const persisted = loadPlannerState();
+        if (!cancelled && persisted) {
+          setTasks(hydratePlannerTasks(persisted.tasks));
+          setBlocks(persisted.blocks);
+        } else if (!cancelled) {
+          // No persisted data, start with empty state
+          setTasks([]);
+          setBlocks([]);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setPersistenceError(
+            error instanceof Error ? error.message : "Failed to hydrate planner state.",
+          );
+          // Try local fallback
+          try {
+            const persisted = loadPlannerState();
+            if (persisted) {
+              setTasks(hydratePlannerTasks(persisted.tasks));
+              setBlocks(persisted.blocks);
+            }
+          } catch (fallbackErr) {
+            console.error("Planner hydration failed completely:", fallbackErr);
+            setTasks([]);
+            setBlocks([]);
+          }
+        }
+      } finally {
+        if (!cancelled) {
+          setIsHydrated(true);
+        }
+      }
     }
 
-    setIsHydrated(true);
-  }, []);
+    void hydratePlannerState();
+    return () => {
+      cancelled = true;
+    };
+  }, [cloudEnabled]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -115,13 +165,24 @@ function PlannerPage() {
       return;
     }
 
-    savePlannerStateDebounced.current({
+    const nextState = {
       version: PLANNER_STORAGE_VERSION,
       persistedAt: new Date().toISOString(),
       tasks,
       blocks,
-    });
-  }, [blocks, isHydrated, tasks]);
+    };
+
+    if (cloudEnabled) {
+      plannerService.save({ tasks, blocks }).catch((error: unknown) => {
+        setPersistenceError(
+          error instanceof Error ? error.message : "Failed to persist planner state.",
+        );
+      });
+      return;
+    }
+
+    savePlannerStateDebounced.current(nextState);
+  }, [blocks, cloudEnabled, isHydrated, tasks]);
 
   const scheduleTask = useCallback(
     (taskId: string, hour: number) => {
@@ -344,6 +405,12 @@ function PlannerPage() {
             </>
           }
         />
+
+        {persistenceError ? (
+          <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-red-200">
+            {persistenceError}
+          </div>
+        ) : null}
 
         {isSyncPanelOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">

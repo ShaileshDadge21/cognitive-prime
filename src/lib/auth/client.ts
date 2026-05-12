@@ -1,5 +1,5 @@
-import { integrationStatus } from "@/lib/config/env";
-import { createSession, clearSession, getSession } from "@/lib/auth/session";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { signInWithPassword, signOut, signUpWithPassword } from "@/lib/supabase/auth";
 
 type AuthCredentials = {
   email: string;
@@ -11,16 +11,14 @@ type SignupInput = AuthCredentials & {
 };
 
 export const authClient = {
-  isConfigured: integrationStatus.supabaseConfigured,
+  isConfigured: isSupabaseConfigured(),
   async signIn(input: AuthCredentials) {
-    createSession(input.email);
-    return getSession();
+    return signInWithPassword(input.email, input.password);
   },
   async signUp(input: SignupInput) {
-    createSession(input.email);
-    return getSession();
+    return signUpWithPassword(input.email, input.password, input.name);
   },
   async signOut() {
-    clearSession();
+    return signOut();
   },
 };
