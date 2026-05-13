@@ -1,9 +1,5 @@
 import { Activity, TrendingUp, AlertTriangle, Heart, Zap, Layers } from "lucide-react";
-import type {
-  ProductivityScore,
-  FatigueMetrics,
-  BurnoutRiskAssessment,
-} from "@/lib/analytics";
+import type { ProductivityScore, FatigueMetrics, BurnoutRiskAssessment } from "@/lib/analytics";
 
 export function ProductivityScoreCard({ score }: { score: ProductivityScore | null }) {
   if (!score) return null;
@@ -169,9 +165,7 @@ export function BurnoutRiskCard({ assessment }: { assessment: BurnoutRiskAssessm
       <div className="space-y-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className={`text-2xl font-bold ${getRiskTextColor()}`}>
-              {getRiskLabel()}
-            </span>
+            <span className={`text-2xl font-bold ${getRiskTextColor()}`}>{getRiskLabel()}</span>
             <span className="text-xs text-muted-foreground">({assessment.score}/100)</span>
           </div>
           <div className="w-full h-2 bg-surface rounded-full overflow-hidden">

@@ -129,9 +129,12 @@ export function computeFatigueMetrics(moodLogs: Tables<"mood_logs">[]): FatigueM
     older.reduce((sum, log) => sum + (log.energy_score ? 100 - log.energy_score : 50), 0) /
     Math.max(older.length, 1);
 
-  const trend = recentAvgFatigue > olderAvgFatigue + 5 ? "increasing" : 
-               recentAvgFatigue < olderAvgFatigue - 5 ? "decreasing" : 
-               "stable";
+  const trend =
+    recentAvgFatigue > olderAvgFatigue + 5
+      ? "increasing"
+      : recentAvgFatigue < olderAvgFatigue - 5
+        ? "decreasing"
+        : "stable";
 
   // Peak time (hour with most logs)
   const timeGroups: Record<string, number> = {};
@@ -212,7 +215,9 @@ export function assessBurnoutRisk(
   }
 
   // Factor 5: High stress in journal
-  const stressEntries = journalEntries.filter((e) => e.stressLevel === "high" || e.stressLevel === "critical");
+  const stressEntries = journalEntries.filter(
+    (e) => e.stressLevel === "high" || e.stressLevel === "critical",
+  );
   if (stressEntries.length > journalEntries.length * 0.3) {
     factors.push("Frequent high-stress journal entries");
     riskScore += 20;
@@ -220,13 +225,7 @@ export function assessBurnoutRisk(
 
   // Determine risk level
   const risk: BurnoutRiskAssessment["risk"] =
-    riskScore >= 80
-      ? "critical"
-      : riskScore >= 60
-        ? "high"
-        : riskScore >= 40
-          ? "moderate"
-          : "low";
+    riskScore >= 80 ? "critical" : riskScore >= 60 ? "high" : riskScore >= 40 ? "moderate" : "low";
 
   // Recommendations
   const recommendations: string[] = [];
@@ -279,13 +278,13 @@ export function computeFocusTrend(moodLogs: Tables<"mood_logs">[]): number[] {
     date.setDate(date.getDate() - i);
     const dateStr = date.toISOString().split("T")[0];
 
-    const dayLogs = moodLogs.filter((log) =>
-      log.logged_at.startsWith(dateStr)
-    );
+    const dayLogs = moodLogs.filter((log) => log.logged_at.startsWith(dateStr));
 
     const avgFocus =
       dayLogs.length > 0
-        ? Math.round(dayLogs.reduce((sum, log) => sum + (log.focus_score ?? 50), 0) / dayLogs.length)
+        ? Math.round(
+            dayLogs.reduce((sum, log) => sum + (log.focus_score ?? 50), 0) / dayLogs.length,
+          )
         : 50;
 
     trend.push(avgFocus);
@@ -313,7 +312,7 @@ export function computeDeepWorkCapacity(
   // Adjust for habit discipline
   const disciplineScore = habits.filter((h) => h.status === "active").length > 0 ? 1.1 : 0.9;
 
-  return Math.round((baseCapacity * fatigueMultiplier * disciplineScore) * 10) / 10;
+  return Math.round(baseCapacity * fatigueMultiplier * disciplineScore * 10) / 10;
 }
 
 /**

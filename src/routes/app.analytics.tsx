@@ -12,7 +12,7 @@ import {
   AreaChart,
   Area,
 } from "recharts";
-import { Sparkles, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { PageShell, PageHeader, GlassCard, SectionHeader } from "@/components/PageShell";
 import {
   useAnalytics,
@@ -31,7 +31,6 @@ import {
   DeepWorkCapacityCard,
   HabitConsistencyCard,
 } from "@/components/analytics/AnalyticsCards";
-import { derivePlannerAnalytics } from "@/lib/analytics";
 import { useHabits } from "@/components/habits/use-habits";
 
 export const Route = createFileRoute("/app/analytics")({
@@ -64,22 +63,24 @@ function AnalyticsPage() {
     );
   }
 
-  const taskTrendData = plannerAnalytics.hydratedTasks.map((task) => ({
-    title: task.title,
-    cognitiveLoad: task.cognitiveLoad ?? 0,
-    fatigue: task.fatigueScore ?? 0,
-    focus: task.focusScore ?? 0,
-  }));
-
-  const habitPerformanceData = habits
-    .slice()
-    .sort((a, b) => b.consistencyScore - a.consistencyScore)
-    .slice(0, 6)
-    .map((habit) => ({
-      title: habit.title,
-      consistency: habit.consistencyScore,
-      completions: habit.completionHistory.filter((item) => item.completed).length,
-    }));
+  if (error) {
+    return (
+      <PageShell>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <p className="text-red-500 font-semibold">Error loading analytics</p>
+            <p className="text-muted-foreground text-sm mt-2">{error}</p>
+            <button
+              onClick={() => refetch()}
+              className="mt-4 px-4 py-2 rounded-lg bg-coral text-background text-sm font-medium"
+            >
+              Try again
+            </button>
+          </div>
+        </div>
+      </PageShell>
+    );
+  }
 
   return (
     <PageShell>
@@ -88,237 +89,176 @@ function AnalyticsPage() {
         title="Cognitive signals, surfaced."
         subtitle="A unified view of your planning, habits, and mental energy so you can avoid burnout and keep your momentum aligned."
         actions={
-          <button className="px-4 py-2 rounded-xl bg-foreground text-background text-sm font-medium flex items-center gap-2">
-            <Sparkles className="h-4 w-4" /> Recalibrate
+          <button
+            onClick={() => refetch()}
+            className="px-4 py-2 rounded-xl bg-foreground text-background text-sm font-medium flex items-center gap-2 hover:opacity-90 transition-opacity"
+          >
+            <RefreshCw className="h-4 w-4" /> Refresh
           </button>
         }
       />
 
       <div className="grid grid-cols-12 gap-6">
-        <GlassCard className="col-span-12 xl:col-span-8">
+        {/* Key Metrics Row */}
+        <div className="col-span-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <ProductivityScoreCard score={productivityScore} />
+          <FatigueMetricsCard metrics={fatigueMetrics} />
+          <DeepWorkCapacityCard capacity={deepWorkCapacity} />
+          <HabitConsistencyCard consistency={habitConsistency} />
+        </div>
+
+        {/* Burnout Risk - Full Width */}
+        <GlassCard className="col-span-12">
+          <BurnoutRiskCard risk={burnoutRisk} />
+        </GlassCard>
+
+        {/* Mood Trend Chart */}
+        <GlassCard className="col-span-12 lg:col-span-8">
           <SectionHeader
-            title="Planner health"
-            sub="Task-level cognitive load and schedule suitability from your current plan."
+            title="Mood and energy trend"
+            sub="Your emotional state and energy levels over the last 7 days."
             action={
-              <span className="text-xs px-2 py-1 rounded-full bg-cyan/10 text-cyan">
-                Live preview
-              </span>
+              <span className="text-xs px-2 py-1 rounded-full bg-cyan/10 text-cyan">Real-time</span>
             }
           />
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            {[
-              {
-                label: "Cognitive score",
-                value: `${plannerAnalytics.metrics.cognitiveScore}`,
-                icon: Activity,
-              },
-              {
-                label: "Average load",
-                value: `${plannerAnalytics.metrics.averageCognitiveLoad}`,
-                icon: ShieldCheck,
-              },
-              {
-                label: "Burnout exposure",
-                value: `${plannerAnalytics.metrics.burnoutExposure}%`,
-                icon: TrendingUp,
-              },
-              {
-                label: "Average fatigue",
-                value: `${plannerAnalytics.metrics.averageFatigueScore}`,
-                icon: Sparkles,
-              },
-            ].map((metric) => {
-              const Icon = metric.icon;
-              return (
-                <div
-                  key={metric.label}
-                  className="rounded-3xl border border-white/10 bg-surface/80 p-5 shadow-soft"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-cyan to-electric text-background">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
-                        {metric.label}
-                      </p>
-                      <p className="mt-2 text-3xl font-semibold">{metric.value}</p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
           <div className="mt-6 h-80">
-            <ResponsiveContainer>
-              <LineChart data={taskTrendData} margin={{ top: 12, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="title" stroke="var(--muted-foreground)" tick={{ fontSize: 11 }} />
-                <YAxis stroke="var(--muted-foreground)" tick={{ fontSize: 11 }} />
-                <Tooltip
-                  contentStyle={{
-                    background: "var(--surface-2)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 12,
-                    fontSize: 12,
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="cognitiveLoad"
-                  stroke="var(--coral)"
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="fatigue"
-                  stroke="var(--electric)"
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="focus"
-                  stroke="var(--violet)"
-                  strokeWidth={2}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </GlassCard>
-
-        <GlassCard className="col-span-12 xl:col-span-4">
-          <SectionHeader
-            title="Habit pulse"
-            sub="A glance at how your habits are performing against consistency and completion."
-          />
-          <div className="grid gap-4">
-            <div className="rounded-3xl border border-white/10 bg-surface/80 p-5">
-              <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
-                Habits tracked
-              </p>
-              <p className="mt-2 text-3xl font-semibold">{habitSummary.totalHabits}</p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {habitSummary.activeHabits} active habits
-              </p>
-            </div>
-            <div className="rounded-3xl border border-white/10 bg-surface/80 p-5">
-              <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
-                Avg consistency
-              </p>
-              <p className="mt-2 text-3xl font-semibold">{habitSummary.averageConsistency}%</p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Longest streak {habitSummary.longestStreak} days
-              </p>
-            </div>
-            <div className="rounded-3xl border border-white/10 bg-surface/80 p-5">
-              <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
-                Burnout risk
-              </p>
-              <p className="mt-2 text-3xl font-semibold">
-                {habitSummary.riskDistribution.high > 0
-                  ? "High"
-                  : habitSummary.riskDistribution.medium > 0
-                    ? "Medium"
-                    : "Low"}
-              </p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {habitSummary.riskDistribution.high} habits at high risk
-              </p>
-            </div>
-          </div>
-        </GlassCard>
-
-        <GlassCard className="col-span-12 lg:col-span-7">
-          <SectionHeader
-            title="Top habit signals"
-            sub="Consistency and completion counts for your strongest routines."
-          />
-          <div className="mt-4 h-72">
-            <ResponsiveContainer>
-              <BarChart
-                data={habitPerformanceData}
-                margin={{ top: 12, right: 8, left: 0, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis
-                  dataKey="title"
-                  stroke="var(--muted-foreground)"
-                  tick={{ fontSize: 11 }}
-                  interval={0}
-                  angle={-25}
-                  textAnchor="end"
-                  height={60}
-                />
-                <YAxis stroke="var(--muted-foreground)" tick={{ fontSize: 11 }} />
-                <Tooltip
-                  contentStyle={{
-                    background: "var(--surface-2)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 12,
-                    fontSize: 12,
-                  }}
-                />
-                <Bar dataKey="consistency" fill="var(--electric)" radius={[12, 12, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </GlassCard>
-
-        <GlassCard className="col-span-12 lg:col-span-5">
-          <SectionHeader
-            title="Actionable recommendations"
-            sub="AI-guided next steps from your current plan."
-          />
-          <div className="space-y-3">
-            {plannerAnalytics.recommendations.map((item) => (
-              <div key={item.id} className="rounded-3xl border border-white/10 bg-surface/80 p-5">
-                <p className="text-sm font-semibold">{item.title}</p>
-                <p className="mt-2 text-sm text-muted-foreground">{item.text}</p>
-                <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-                  {item.severity === "warning"
-                    ? "Watch"
-                    : item.severity === "good"
-                      ? "Stable"
-                      : "Info"}
-                </div>
+            {moodTrend && moodTrend.length > 0 ? (
+              <ResponsiveContainer>
+                <AreaChart data={moodTrend} margin={{ top: 12, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                  <XAxis dataKey="date" stroke="var(--muted-foreground)" tick={{ fontSize: 11 }} />
+                  <YAxis
+                    stroke="var(--muted-foreground)"
+                    tick={{ fontSize: 11 }}
+                    domain={[0, 10]}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: "var(--surface-2)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 12,
+                      fontSize: 12,
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="mood"
+                    stroke="var(--electric)"
+                    fill="var(--electric)"
+                    fillOpacity={0.2}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="energy"
+                    stroke="var(--cyan)"
+                    fill="var(--cyan)"
+                    fillOpacity={0.1}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="stress"
+                    stroke="var(--coral)"
+                    fill="var(--coral)"
+                    fillOpacity={0.1}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                No mood data available yet
               </div>
-            ))}
+            )}
           </div>
         </GlassCard>
 
-        <GlassCard className="col-span-12">
+        {/* Focus Trend */}
+        <GlassCard className="col-span-12 lg:col-span-4">
           <SectionHeader
-            title="Habit consistency overview"
-            sub="Charted by your most stable routines."
+            title="7-day focus trend"
+            sub="Your focus score progression over the week."
           />
-          <div className="h-72">
-            <ResponsiveContainer>
-              <RadarChart
-                data={Object.entries(habitSummary.riskDistribution).map(([risk, value]) => ({
-                  name: risk,
-                  value,
-                }))}
-              >
-                <PolarGrid stroke="var(--border)" />
-                <PolarAngleAxis
-                  dataKey="name"
-                  tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
-                />
-                <Radar
-                  dataKey="value"
-                  stroke="var(--coral)"
-                  fill="var(--coral)"
-                  fillOpacity={0.35}
-                />
-              </RadarChart>
-            </ResponsiveContainer>
+          <div className="mt-6 h-80">
+            {focusTrend && focusTrend.length > 0 ? (
+              <ResponsiveContainer>
+                <LineChart data={focusTrend} margin={{ top: 12, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                  <XAxis dataKey="date" stroke="var(--muted-foreground)" tick={{ fontSize: 11 }} />
+                  <YAxis
+                    stroke="var(--muted-foreground)"
+                    tick={{ fontSize: 11 }}
+                    domain={[0, 10]}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: "var(--surface-2)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 12,
+                      fontSize: 12,
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="focus"
+                    stroke="var(--violet)"
+                    strokeWidth={2}
+                    dot={{ fill: "var(--violet)", r: 4 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                No focus data available yet
+              </div>
+            )}
           </div>
         </GlassCard>
+
+        {/* Habit Performance */}
+        {habits && habits.length > 0 && (
+          <GlassCard className="col-span-12">
+            <SectionHeader
+              title="Habit performance"
+              sub="Your top habits by consistency and completion."
+            />
+            <div className="mt-4 h-72">
+              <ResponsiveContainer>
+                <BarChart
+                  data={habits
+                    .slice()
+                    .sort((a, b) => b.consistencyScore - a.consistencyScore)
+                    .slice(0, 8)
+                    .map((habit) => ({
+                      name: habit.title,
+                      consistency: habit.consistencyScore,
+                      completions:
+                        habit.completionHistory?.filter((item) => item.completed).length ?? 0,
+                    }))}
+                  margin={{ top: 12, right: 8, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                  <XAxis
+                    dataKey="name"
+                    stroke="var(--muted-foreground)"
+                    tick={{ fontSize: 11 }}
+                    angle={-25}
+                    textAnchor="end"
+                    height={60}
+                  />
+                  <YAxis stroke="var(--muted-foreground)" tick={{ fontSize: 11 }} />
+                  <Tooltip
+                    contentStyle={{
+                      background: "var(--surface-2)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 12,
+                      fontSize: 12,
+                    }}
+                  />
+                  <Bar dataKey="consistency" fill="var(--electric)" radius={[12, 12, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </GlassCard>
+        )}
       </div>
     </PageShell>
   );
