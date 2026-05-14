@@ -218,6 +218,91 @@ export type Database = {
           Omit<Database["public"]["Tables"]["analytics_snapshots"]["Row"], "id" | "user_id">
         >;
       };
+      focus_sessions: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string;
+          description: string | null;
+          planned_duration: number;
+          actual_duration: number | null;
+          start_time: string;
+          end_time: string | null;
+          status: string;
+          pause_count: number;
+          total_pause_duration: number;
+          task_id: string | null;
+          energy_level_start: number | null;
+          energy_level_end: number | null;
+          focus_quality: number | null;
+          mood_before: string | null;
+          mood_after: string | null;
+          notes: string | null;
+          metadata: Json | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["focus_sessions"]["Row"],
+          "created_at" | "updated_at"
+        > & {
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Omit<Database["public"]["Tables"]["focus_sessions"]["Row"], "id" | "user_id">
+        >;
+      };
+      focus_interruptions: {
+        Row: {
+          id: string;
+          user_id: string;
+          session_id: string;
+          interruption_type: string;
+          duration_paused: number;
+          description: string | null;
+          severity: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["focus_interruptions"]["Row"],
+          "created_at" | "updated_at"
+        > & {
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Omit<Database["public"]["Tables"]["focus_interruptions"]["Row"], "id" | "user_id">
+        >;
+      };
+      focus_analytics: {
+        Row: {
+          id: string;
+          user_id: string;
+          date: string;
+          total_session_duration: number;
+          session_count: number;
+          interruption_count: number;
+          average_focus_quality: number | null;
+          best_focus_window: number | null;
+          fatigue_level: number | null;
+          recovery_recommendation: string | null;
+          weekly_deep_work_hours: number | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["focus_analytics"]["Row"],
+          "created_at" | "updated_at"
+        > & {
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Omit<Database["public"]["Tables"]["focus_analytics"]["Row"], "id" | "user_id">
+        >;
+      };
       user_settings: {
         Row: {
           user_id: string;
